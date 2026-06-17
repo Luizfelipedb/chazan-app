@@ -1814,72 +1814,108 @@ function PrintView({ proposta: p, onBack, onSave, allPropostas, onBackup }) {
 <title>${p.numero} - Chazan Representações</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; padding: 32px; }
-  @media print { body { padding: 16px; } }
-  .cond-label { font-weight: 700; color: #374151; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1e293b; background:#fff; }
+  @media print { @page { margin: 15mm 12mm; } }
+  .page { max-width: 800px; margin: 0 auto; padding: 28px 32px; }
+  .section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#64748b; border-bottom:1px solid #e2e8f0; padding-bottom:3px; margin-bottom:8px; }
+  table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  th { background:#1e293b; color:#fff; padding:7px 8px; text-align:left; font-weight:600; font-size:11px; }
+  td { padding:6px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+  tr:nth-child(even) td { background:#f8fafc; }
+  .text-right { text-align:right; }
+  .text-center { text-align:center; }
+  .total-row td { background:#1e293b !important; color:#fff; font-weight:700; padding:8px; }
+  .info-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; }
+  .label { font-weight:700; color:#374151; }
 </style>
 </head><body>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-    <div>
-      <img src="${LOGO_B64}" style="height:40px;width:auto;object-fit:contain;" alt="Chazan Representações" />
-      ${getIndLogo(p.industriaId) ? `<br/><img src="${getIndLogo(p.industriaId)}" style="height:40px;width:auto;object-fit:contain;" alt="${ind.nome}" />` : ''}
-      <div style="font-size:11px;color:#64748b;margin-top:2px">Proposta Comercial</div>
+<div class="page">
+
+  <!-- HEADER -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <img src="${LOGO_B64}" style="height:48px;width:auto;object-fit:contain" alt="Chazan" />
+      ${getIndLogo(p.industriaId) ? `<img src="${getIndLogo(p.industriaId)}" style="height:40px;width:auto;object-fit:contain" alt="${ind.nome}" />` : ''}
     </div>
     <div style="text-align:right">
-      <div style="font-size:20px;font-weight:700;color:#2563eb">${p.numero}</div>
-      <div style="font-size:12px;color:#64748b">${fmtDate(p.data)}</div>
-      ${p.validade ? `<div style="font-size:12px;color:#dc2626;font-weight:600">Válida até ${fmtDate(p.validade)}</div>` : ""}
+      <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Proposta Comercial</div>
+      <div style="font-size:22px;font-weight:800;color:#1e293b;line-height:1.1">${p.numero}</div>
+      <div style="font-size:11px;color:#64748b">${fmtDate(p.data)}</div>
+      ${p.validade ? `<div style="font-size:11px;color:#dc2626;font-weight:600">Válida até ${fmtDate(p.validade)}</div>` : ""}
     </div>
   </div>
-  <div style="height:3px;background:#0f172a;margin-bottom:16px"></div>
-  <div style="display:flex;gap:32px;margin-bottom:20px">
-    <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:1px;margin-bottom:4px">Cliente</div>
-      <div style="font-size:15px;font-weight:700">${cli.nome || "—"}</div>
-      ${cli.cnpj ? `<div style="font-size:12px;color:#475569">CNPJ: ${cli.cnpj}</div>` : ""}
-      ${cli.cidade ? `<div style="font-size:12px;color:#475569">${cli.cidade}</div>` : ""}
-      ${cli.fone ? `<div style="font-size:12px;color:#475569">Tel: ${cli.fone}</div>` : ""}
+
+  <div style="height:3px;background:linear-gradient(90deg,#1e293b,#3b82f6);margin-bottom:16px;border-radius:2px"></div>
+
+  <!-- CLIENTE + CONDIÇÕES -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="info-box">
+      <div class="section-title">Informações sobre o Cliente</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${cli.nome || "—"}</div>
+      ${cli.cnpj ? `<div style="color:#475569"><span class="label">CNPJ:</span> ${cli.cnpj}</div>` : ""}
+      ${cli.cidade ? `<div style="color:#475569"><span class="label">Cidade:</span> ${cli.cidade}</div>` : ""}
+      ${cli.fone ? `<div style="color:#475569"><span class="label">Tel:</span> ${cli.fone}</div>` : ""}
+      ${cli.email ? `<div style="color:#475569"><span class="label">E-mail:</span> ${cli.email}</div>` : ""}
     </div>
-    <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:1px;margin-bottom:4px">Indústria / Tabela</div>
-      <div style="font-size:14px;font-weight:700">${ind.nome || "—"}</div>
-      ${p.tabela ? `<div style="font-size:12px;color:#475569">Tabela ${p.tabela}</div>` : ""}
-      ${p.tabela ? `<div style="font-size:12px;color:#475569">${ind.nome} ${p.tabela.charAt(0).toUpperCase() + p.tabela.slice(1)}</div>` : ""}
+    <div class="info-box">
+      <div class="section-title">Informações sobre o Orçamento</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${ind.nome || "—"}</div>
+      ${p.tabela ? `<div style="color:#475569"><span class="label">Tabela:</span> ${ind.nome} ${p.tabela.charAt(0).toUpperCase()+p.tabela.slice(1)}</div>` : ""}
+      ${p.validade ? `<div style="color:#475569"><span class="label">Validade:</span> ${fmtDate(p.validade)}</div>` : ""}
+      ${p.pagamento ? `<div style="color:#475569"><span class="label">Pagamento:</span> ${p.pagamento}</div>` : ""}
+      ${p.frete ? `<div style="color:#475569"><span class="label">Frete:</span> ${p.frete}</div>` : ""}
     </div>
   </div>
-  <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
-    <thead>
-      <tr style="background:#0f172a;color:#fff">
-        <th style="padding:7px 8px;text-align:left">#</th>
-        <th style="padding:7px 8px;text-align:left">Produto</th>
-        <th style="padding:7px 8px;text-align:left">Cód.</th>
-        <th style="padding:7px 8px;text-align:center">Un.</th>
-        <th style="padding:7px 8px;text-align:right">Qtd</th>
-        <th style="padding:7px 8px;text-align:right">Unitário</th>
-        <th style="padding:7px 8px;text-align:right">Subtotal</th>
-        <th style="padding:7px 8px;text-align:right">Peso</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-    <tfoot>
-      ${descontoRow}
-      <tr>
-        <td colspan="6" style="padding:7px 8px;text-align:right;font-weight:700">TOTAL</td>
-        <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:15px">${BRL(total)}</td>
-        <td style="padding:7px 8px;text-align:right;color:#64748b;font-weight:600">${peso > 0 ? KG(peso) : "—"}</td>
-      </tr>
-      ${IND_COM_VOLUME.includes(p.industriaId) && calcVolumeTotal(p.itens) > 0 ? `<tr><td colspan="8" style="padding:7px 8px;text-align:right;color:#2563eb;font-weight:600">Volume Total</td><td style="padding:7px 8px;text-align:right;color:#2563eb;font-weight:700">${VOL(calcVolumeTotal(p.itens))}</td></tr>` : ""}
-      ${freteRow}
-    </tfoot>
-  </table>
-  <div style="font-size:12px;color:#475569;margin-bottom:12px;display:flex;gap:32px;flex-wrap:wrap">
-    ${p.pagamento ? `<span><span class="cond-label">Pagamento:</span> ${p.pagamento}</span>` : ""}
-    ${p.frete ? `<span><span class="cond-label">Frete:</span> ${p.frete}</span>` : ""}
+
+  <!-- TABELA DE PRODUTOS -->
+  <div style="margin-bottom:16px">
+    <div class="section-title">Produtos</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th>Produto</th>
+          <th style="width:90px">Cód.</th>
+          <th style="width:36px" class="text-center">Un.</th>
+          <th style="width:60px" class="text-right">Qtd</th>
+          <th style="width:80px" class="text-right">R$ Unit.</th>
+          <th style="width:90px" class="text-right">R$ Total</th>
+          <th style="width:70px" class="text-right">Peso (kg)</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        ${descontoRow}
+        ${freteRow}
+        <tr class="total-row">
+          <td colspan="6" class="text-right" style="font-size:12px">TOTAL FINAL</td>
+          <td class="text-right" style="font-size:14px">${BRL(total)}</td>
+          <td class="text-right" style="font-size:11px">${peso > 0 ? KG(peso) : "—"}</td>
+        </tr>
+        ${IND_COM_VOLUME.includes(p.industriaId) && calcVolumeTotal(p.itens) > 0 ? `<tr><td colspan="7" style="padding:6px 8px;text-align:right;color:#2563eb;font-weight:600">Volume Total: ${VOL(calcVolumeTotal(p.itens))}</td><td></td></tr>` : ""}
+      </tfoot>
+    </table>
   </div>
-  ${p.obs ? `<div style="background:#f8fafc;border-radius:6px;padding:10px 12px;font-size:13px;margin-bottom:12px"><strong>Observações:</strong> ${p.obs}</div>` : ""}
-  <div style="border-top:1px solid #e2e8f0;padding-top:10px;font-size:11px;color:#94a3b8;text-align:center">
-    Chazan Representações · ${p.numero} · ${p.status}
+
+  ${p.obs ? `<div class="info-box" style="margin-bottom:16px"><span class="label">Observações:</span> ${p.obs}</div>` : ""}
+
+  <!-- RODAPÉ -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:32px;padding-top:12px;border-top:1px solid #e2e8f0">
+    <div style="font-size:10px;color:#94a3b8">
+      <div style="font-weight:700;color:#475569;font-size:11px">Chazan Representações</div>
+      <div>Chazan: 48 99901-1001</div>
+      <div>Jaqueline: 48 99148-0022</div>
+    </div>
+    <div style="text-align:center">
+      <div style="border-top:1px solid #94a3b8;width:180px;padding-top:4px;font-size:10px;color:#64748b">Comprador</div>
+    </div>
+    <div style="text-align:right;font-size:10px;color:#94a3b8">
+      <div style="font-weight:700;color:#475569;font-size:11px">Jaqueline Bonkewitz - Vendedor</div>
+      <div>${p.numero} · ${fmtDate(p.data)}</div>
+    </div>
   </div>
+
+</div>
   <script>window.onload=()=>{ window.print(); }<\/script>
 </body></html>`;
         // Download as HTML file - user opens it and prints to PDF
