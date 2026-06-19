@@ -267,6 +267,7 @@ function createWelcomeStep(numPropostas) {
             { label: "📦 Consultar Produto", value: "search_produto" },
             { label: "➕ Novo Cliente", value: "cadastrar_cliente" },
             { label: "➕ Novo Produto", value: "cadastrar_produto" },
+            { label: "✏️ Gerenciar Produtos", value: "gerenciar_produtos" },
             { label: "📊 CRM", value: "crm_dashboard" },
             { label: "🔔 Alertas", value: "followup_check" },
         ],
@@ -592,6 +593,10 @@ function App() {
             setShowCadastro("produto");
             return;
         }
+        if (action === "gerenciar_produtos") {
+            setShowCadastro("gerenciar_produtos");
+            return;
+        }
         if (action === "crm_status_menu") {
             const p = data;
             pushBot({ id: "crm_menu", text: `📊 Alterar status de *${p.numero}*
@@ -737,6 +742,12 @@ Nova observação (ou pule):`,
             pushBot({ id: "np_cli", text: `Nova proposta *${num}* 🚀
 
 Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
+                chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+            });
+            return;
+        }
+        if (action === "np_buscar_cliente_novo") {
+            pushBot({ id: "np_cli_back", text: `Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
                 chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
             });
             return;
@@ -1003,7 +1014,7 @@ Observações? (ou pule)`,
                 pushBot({ id: "nc2", text: "Nenhum cliente encontrado. Tente outro termo:", inputMode: "np_cliente", chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }, { label: "🏠 Menu Inicial", value: "menu" }] });
                 return;
             }
-            pushBot({ id: "ncr", text: `${r.length} resultado(s). Selecione:`, chips: r.map(c => ({ label: c.nome.length > 38 ? c.nome.slice(0, 36) + "…" : c.nome, value: "np_select_cliente", data: c })) });
+            pushBot({ id: "ncr", text: `${r.length} resultado(s). Selecione:`, chips: [...r.map(c => ({ label: c.nome.length > 38 ? c.nome.slice(0, 36) + "…" : c.nome, value: "np_select_cliente", data: c })), { label: "← Buscar novamente", value: "np_buscar_cliente_novo" }, { label: "❌ Cancelar", value: "cancelar_proposta" }] });
             return;
         }
         if (mode === "search_produto") {
@@ -1230,14 +1241,16 @@ Observações? (ou pule)`,
     const processActionWrapped = (action, label, data) => {
         if (action === "np_choose_edit") {
             setDraft(d => {
-                if (!d || !d.itens.length)
+                if (!d || !d.itens.length) {
+                    pushBot({ id: "np_ce_empty", text: "Nenhum item para editar.", chips: [{ label: "← Voltar", value: "editar_proposta", data: d }] });
                     return d;
+                }
                 pushBot({
                     id: "np_choose_edit",
                     text: "Qual item deseja editar?",
                     chips: [
                         ...d.itens.map((it, i) => ({ label: `${i + 1}. ${it.nome.slice(0, 28)} — ${BRL(it.unitario)}`, value: "np_edit_item", data: it })),
-                        { label: "❌ Cancelar", value: "cancelar_proposta" },
+                        { label: "← Voltar", value: "np_after_item_back" },
                     ]
                 });
                 return d;
@@ -1304,6 +1317,32 @@ Observações? (ou pule)`,
                 setShowCadastro(null);
                 pushBot({ id: "prod_saved", text: `✅ Produto *${novo.nome}* cadastrado!`, chips: [{ label: "➕ Novo Produto", value: "cadastrar_produto" }, { label: "📋 Nova Proposta", value: "new_proposta" }, { label: "🏠 Menu Inicial", value: "menu" }] });
             } });
+    }
+    if (showCadastro === "gerenciar_produtos") {
+        return React.createElement(GerenciarProdutos, {
+            industrias: SEED_DATA.industrias,
+            customProdutos,
+            seedProdutos: SEED_DATA.produtos,
+            onBack: () => { setShowCadastro(null); pushBot(createWelcomeStep(propostas.length)); },
+            onSave: (prodAtualizado) => {
+                setCustomProdutos(prev => {
+                    const updated = prev.map(p => p.id === prodAtualizado.id ? prodAtualizado : p);
+                    saveCustomProdutos(updated);
+                    _extraProdutos = updated;
+                    return updated;
+                });
+            },
+            onDelete: (prodId) => {
+                setCustomProdutos(prev => {
+                    const updated = prev.filter(p => p.id !== prodId);
+                    saveCustomProdutos(updated);
+                    _extraProdutos = updated;
+                    return updated;
+                });
+                setShowCadastro(null);
+                pushBot(createWelcomeStep(propostas.length));
+            }
+        });
     }
     // ── Backup modal ─────────────────────────────────────────────────────────
     if (showBackup) {
@@ -2155,6 +2194,121 @@ function CadastroProduto({ industrias, onBack, onSave }) {
             ].map(f => (React.createElement("div", { key: f.key, style: { marginBottom: 14 } },
                 React.createElement("label", { style: { display: "block", color: "#94a3b8", fontSize: 12, fontWeight: 600, marginBottom: 4 } }, f.label),
                 React.createElement("input", { value: form[f.key], onChange: e => set(f.key, e.target.value), placeholder: f.placeholder, style: { width: "100%", padding: "10px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#1e293b", fontSize: 14, outline: "none", boxSizing: "border-box" } })))))));
+}
+// ── GerenciarProdutos ─────────────────────────────────────────────────────────
+function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, onSave, onDelete }) {
+    const todos = [...seedProdutos, ...customProdutos];
+    const [busca, setBusca] = React.useState("");
+    const [indFiltro, setIndFiltro] = React.useState("");
+    const [editando, setEditando] = React.useState(null); // produto em edição
+    const [form, setForm] = React.useState({});
+    const [erro, setErro] = React.useState("");
+    const [confirmDel, setConfirmDel] = React.useState(null);
+
+    const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    const filtrados = todos.filter(p => {
+        const matchBusca = !busca || p.nome.toLowerCase().includes(busca.toLowerCase()) || (p.codigo || "").toLowerCase().includes(busca.toLowerCase());
+        const matchInd = !indFiltro || p.industriaId === indFiltro;
+        return matchBusca && matchInd;
+    });
+
+    const abrirEdicao = (prod) => {
+        setEditando(prod);
+        setForm({
+            nome: prod.nome || "",
+            codigo: prod.codigo || "",
+            industriaId: prod.industriaId || "",
+            unidade: prod.unidade || "",
+            preco_revenda: prod.preco_revenda || prod.preco || "",
+            preco_construtora: prod.preco_construtora || "",
+            emb_min: prod.emb_min || "",
+            peso_unit: prod.peso_unit || "",
+            volume_emb: prod.volume_emb || "",
+        });
+        setErro("");
+    };
+
+    const handleSalvar = () => {
+        if (!form.nome.trim()) { setErro("Nome obrigatório."); return; }
+        if (!form.preco_revenda) { setErro("Preço Revenda obrigatório."); return; }
+        const updated = {
+            ...editando,
+            ...form,
+            preco: Number(String(form.preco_revenda).replace(",", ".")),
+            preco_revenda: Number(String(form.preco_revenda).replace(",", ".")),
+            preco_construtora: Number(String(form.preco_construtora || form.preco_revenda).replace(",", ".")),
+            emb_min: Number(form.emb_min) || 1,
+            peso_unit: Number(String(form.peso_unit || "0").replace(",", ".")) || 0,
+            volume_emb: Number(String(form.volume_emb || "0").replace(",", ".")) || 0,
+        };
+        onSave(updated);
+        setEditando(null);
+    };
+
+    const nomeInd = (id) => industrias.find(i => i.id === id)?.nome || id;
+    const isCustom = (prod) => customProdutos.some(p => p.id === prod.id);
+
+    const campos = [
+        { key: "nome", label: "Nome do Produto *", placeholder: "Descrição" },
+        { key: "codigo", label: "Código / SKU", placeholder: "Código" },
+        { key: "unidade", label: "Unidade", placeholder: "M², CX, PÇ..." },
+        { key: "preco_revenda", label: "Preço Revenda (R$) *", placeholder: "0,00" },
+        { key: "preco_construtora", label: "Preço Construtora (R$)", placeholder: "0,00" },
+        { key: "emb_min", label: "Embalagem Mínima", placeholder: "Ex: 10" },
+        { key: "peso_unit", label: "Peso Unitário (kg)", placeholder: "Ex: 1,5" },
+        { key: "volume_emb", label: "Volume Embalagem (m³)", placeholder: "Ex: 0,034" },
+    ];
+
+    const inputStyle = { width: "100%", padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#1e293b", fontSize: 13, outline: "none", boxSizing: "border-box" };
+    const labelStyle = { display: "block", color: "#64748b", fontSize: 11, fontWeight: 600, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.04em" };
+
+    // Tela de edição
+    if (editando) return React.createElement("div", { style: S.root },
+        React.createElement("div", { style: { ...S.header, justifyContent: "space-between" } },
+            React.createElement("button", { onClick: () => setEditando(null), style: S.printBack }, "← Voltar"),
+            React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, isCustom(editando) ? "✏️ Editar Produto" : "👁 Produto (somente leitura)"),
+            isCustom(editando) && React.createElement("button", { onClick: handleSalvar, style: { ...S.printBtn, background: "#16a34a" } }, "✓ Salvar")),
+        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 16 } },
+            !isCustom(editando) && React.createElement("div", { style: { background: "#fef3c7", color: "#92400e", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13 } },
+                "⚠️ Este produto faz parte da base de dados da indústria e não pode ser editado aqui. Para ajustar preço em uma proposta, use o campo de edição na proposta."),
+            erro && React.createElement("div", { style: { background: "#dc2626", color: "#fff", padding: "8px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13 } }, erro),
+            React.createElement("div", { style: { marginBottom: 14 } },
+                React.createElement("label", { style: labelStyle }, "Indústria"),
+                React.createElement("select", { value: form.industriaId, disabled: !isCustom(editando), onChange: e => set("industriaId", e.target.value), style: { ...inputStyle, opacity: isCustom(editando) ? 1 : 0.6 } },
+                    React.createElement("option", { value: "" }, "Selecione…"),
+                    industrias.map(i => React.createElement("option", { key: i.id, value: i.id }, i.nome)))),
+            campos.map(c => React.createElement("div", { key: c.key, style: { marginBottom: 14 } },
+                React.createElement("label", { style: labelStyle }, c.label),
+                React.createElement("input", { value: form[c.key] ?? "", onChange: e => set(c.key, e.target.value), placeholder: c.placeholder, disabled: !isCustom(editando), style: { ...inputStyle, opacity: isCustom(editando) ? 1 : 0.6 } }))),
+            isCustom(editando) && React.createElement("button", { onClick: () => setConfirmDel(editando), style: { width: "100%", padding: "10px", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, color: "#dc2626", fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 8 } }, "🗑 Excluir este produto"),
+            confirmDel && React.createElement("div", { style: { background: "#fff", border: "2px solid #dc2626", borderRadius: 10, padding: 16, marginTop: 12 } },
+                React.createElement("p", { style: { color: "#1e293b", fontWeight: 600, marginBottom: 12 } }, `Excluir "${confirmDel.nome}"? Isso não pode ser desfeito.`),
+                React.createElement("div", { style: { display: "flex", gap: 10 } },
+                    React.createElement("button", { onClick: () => setConfirmDel(null), style: { flex: 1, padding: 10, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontWeight: 600 } }, "Cancelar"),
+                    React.createElement("button", { onClick: () => { onDelete(confirmDel.id); setEditando(null); setConfirmDel(null); }, style: { flex: 1, padding: 10, background: "#dc2626", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 } }, "Excluir")))));
+
+    // Lista
+    return React.createElement("div", { style: S.root },
+        React.createElement("div", { style: { ...S.header, justifyContent: "space-between" } },
+            React.createElement("button", { onClick: onBack, style: S.printBack }, "← Voltar"),
+            React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, `📦 Produtos (${filtrados.length})`),
+            React.createElement("span", { style: { fontSize: 11, color: "#aed6f1" } }, `${todos.length} total`)),
+        React.createElement("div", { style: { padding: "12px 16px", background: "#1a5276", display: "flex", gap: 8, flexShrink: 0 } },
+            React.createElement("input", { value: busca, onChange: e => setBusca(e.target.value), placeholder: "Buscar por nome ou código…", style: { ...inputStyle, flex: 2 } }),
+            React.createElement("select", { value: indFiltro, onChange: e => setIndFiltro(e.target.value), style: { ...inputStyle, flex: 1 } },
+                React.createElement("option", { value: "" }, "Todas"),
+                industrias.map(i => React.createElement("option", { key: i.id, value: i.id }, i.nome)))),
+        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 12 } },
+            filtrados.length === 0
+                ? React.createElement("div", { style: { textAlign: "center", color: "#94a3b8", marginTop: 40 } }, "Nenhum produto encontrado.")
+                : filtrados.map(prod => React.createElement("div", { key: prod.id, onClick: () => abrirEdicao(prod), style: { background: "#fff", borderRadius: 10, padding: "12px 14px", marginBottom: 8, border: "1px solid #e2e8f0", borderLeft: `4px solid ${isCustom(prod) ? "#2563eb" : "#e2e8f0"}`, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                    React.createElement("div", null,
+                        React.createElement("div", { style: { fontWeight: 700, fontSize: 13, color: "#1e293b" } }, prod.nome),
+                        React.createElement("div", { style: { fontSize: 11, color: "#64748b", marginTop: 2 } }, `${nomeInd(prod.industriaId)} · ${prod.codigo || "sem código"} · ${prod.unidade || ""}`)),
+                    React.createElement("div", { style: { textAlign: "right", flexShrink: 0, marginLeft: 10 } },
+                        React.createElement("div", { style: { fontWeight: 700, color: "#16a34a", fontSize: 14 } }, `R$ ${Number(prod.preco_revenda || prod.preco || 0).toFixed(2)}`),
+                        isCustom(prod) && React.createElement("div", { style: { fontSize: 10, color: "#2563eb", fontWeight: 600, marginTop: 2 } }, "✏️ editável"))))));
 }
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Styles ───────────────────────────────────────────────────────────────────
