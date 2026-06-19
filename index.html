@@ -1319,29 +1319,35 @@ Observações? (ou pule)`,
             } });
     }
     if (showCadastro === "gerenciar_produtos") {
+        const handleGerenciarSave = React.useCallback((prodAtualizado) => {
+            setCustomProdutos(prev => {
+                const updated = prev.map(p => p.id === prodAtualizado.id ? prodAtualizado : p);
+                saveCustomProdutos(updated);
+                _extraProdutos = updated;
+                return updated;
+            });
+        }, []);
+        const handleGerenciarDelete = React.useCallback((prodId) => {
+            setCustomProdutos(prev => {
+                const updated = prev.filter(p => p.id !== prodId);
+                saveCustomProdutos(updated);
+                _extraProdutos = updated;
+                return updated;
+            });
+            setShowCadastro(null);
+            pushBot(createWelcomeStep(propostas.length));
+        }, [propostas.length]);
+        const handleGerenciarBack = React.useCallback(() => {
+            setShowCadastro(null);
+            pushBot(createWelcomeStep(propostas.length));
+        }, [propostas.length]);
         return React.createElement(GerenciarProdutos, {
             industrias: SEED_DATA.industrias,
             customProdutos,
             seedProdutos: SEED_DATA.produtos,
-            onBack: () => { setShowCadastro(null); pushBot(createWelcomeStep(propostas.length)); },
-            onSave: (prodAtualizado) => {
-                setCustomProdutos(prev => {
-                    const updated = prev.map(p => p.id === prodAtualizado.id ? prodAtualizado : p);
-                    saveCustomProdutos(updated);
-                    _extraProdutos = updated;
-                    return updated;
-                });
-            },
-            onDelete: (prodId) => {
-                setCustomProdutos(prev => {
-                    const updated = prev.filter(p => p.id !== prodId);
-                    saveCustomProdutos(updated);
-                    _extraProdutos = updated;
-                    return updated;
-                });
-                setShowCadastro(null);
-                pushBot(createWelcomeStep(propostas.length));
-            }
+            onBack: handleGerenciarBack,
+            onSave: handleGerenciarSave,
+            onDelete: handleGerenciarDelete,
         });
     }
     // ── Backup modal ─────────────────────────────────────────────────────────
@@ -2206,18 +2212,14 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-    const todos = React.useMemo(() => [...seedProdutos, ...customProdutos], [seedProdutos.length, customProdutos.length]);
+    const todos = [...seedProdutos, ...customProdutos];
 
-    const filtrados = React.useMemo(() => {
-        const bl = busca.toLowerCase().trim();
-        return todos.filter(p => {
-            const matchBusca = !bl ||
-                (p.nome || "").toLowerCase().includes(bl) ||
-                (p.codigo || "").toLowerCase().includes(bl);
-            const matchInd = !indFiltro || p.industriaId === indFiltro;
-            return matchBusca && matchInd;
-        });
-    }, [busca, indFiltro, todos]);
+    const bl = busca.toLowerCase().trim();
+    const filtrados = todos.filter(p => {
+        if (bl && !(p.nome || "").toLowerCase().includes(bl) && !(p.codigo || "").toLowerCase().includes(bl)) return false;
+        if (indFiltro && p.industriaId !== indFiltro) return false;
+        return true;
+    });
 
     const abrirEdicao = (prod) => {
         setEditando(prod);
