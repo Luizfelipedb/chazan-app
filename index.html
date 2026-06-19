@@ -2197,7 +2197,6 @@ function CadastroProduto({ industrias, onBack, onSave }) {
 }
 // ── GerenciarProdutos ─────────────────────────────────────────────────────────
 function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, onSave, onDelete }) {
-    const todos = [...seedProdutos, ...customProdutos];
     const [busca, setBusca] = React.useState("");
     const [indFiltro, setIndFiltro] = React.useState("");
     const [editando, setEditando] = React.useState(null);
@@ -2206,6 +2205,8 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     const [confirmDel, setConfirmDel] = React.useState(null);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    const todos = React.useMemo(() => [...seedProdutos, ...customProdutos], [seedProdutos.length, customProdutos.length]);
 
     const filtrados = React.useMemo(() => {
         const bl = busca.toLowerCase().trim();
@@ -2216,7 +2217,7 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
             const matchInd = !indFiltro || p.industriaId === indFiltro;
             return matchBusca && matchInd;
         });
-    }, [busca, indFiltro]);
+    }, [busca, indFiltro, todos]);
 
     const abrirEdicao = (prod) => {
         setEditando(prod);
