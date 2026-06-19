@@ -2207,14 +2207,16 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-    const buscaLower = busca.toLowerCase().trim();
-    const filtrados = todos.filter(p => {
-        const matchBusca = !buscaLower ||
-            (p.nome || "").toLowerCase().includes(buscaLower) ||
-            (p.codigo || "").toLowerCase().includes(buscaLower);
-        const matchInd = !indFiltro || p.industriaId === indFiltro;
-        return matchBusca && matchInd;
-    });
+    const filtrados = React.useMemo(() => {
+        const bl = busca.toLowerCase().trim();
+        return todos.filter(p => {
+            const matchBusca = !bl ||
+                (p.nome || "").toLowerCase().includes(bl) ||
+                (p.codigo || "").toLowerCase().includes(bl);
+            const matchInd = !indFiltro || p.industriaId === indFiltro;
+            return matchBusca && matchInd;
+        });
+    }, [busca, indFiltro]);
 
     const abrirEdicao = (prod) => {
         setEditando(prod);
