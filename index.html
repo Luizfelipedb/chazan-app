@@ -1319,35 +1319,29 @@ Observações? (ou pule)`,
             } });
     }
     if (showCadastro === "gerenciar_produtos") {
-        const handleGerenciarSave = React.useCallback((prodAtualizado) => {
-            setCustomProdutos(prev => {
-                const updated = prev.map(p => p.id === prodAtualizado.id ? prodAtualizado : p);
-                saveCustomProdutos(updated);
-                _extraProdutos = updated;
-                return updated;
-            });
-        }, []);
-        const handleGerenciarDelete = React.useCallback((prodId) => {
-            setCustomProdutos(prev => {
-                const updated = prev.filter(p => p.id !== prodId);
-                saveCustomProdutos(updated);
-                _extraProdutos = updated;
-                return updated;
-            });
-            setShowCadastro(null);
-            pushBot(createWelcomeStep(propostas.length));
-        }, [propostas.length]);
-        const handleGerenciarBack = React.useCallback(() => {
-            setShowCadastro(null);
-            pushBot(createWelcomeStep(propostas.length));
-        }, [propostas.length]);
         return React.createElement(GerenciarProdutos, {
             industrias: SEED_DATA.industrias,
             customProdutos,
             seedProdutos: SEED_DATA.produtos,
-            onBack: handleGerenciarBack,
-            onSave: handleGerenciarSave,
-            onDelete: handleGerenciarDelete,
+            onBack: () => { setShowCadastro(null); pushBot(createWelcomeStep(propostas.length)); },
+            onSave: (prodAtualizado) => {
+                setCustomProdutos(prev => {
+                    const updated = prev.map(p => p.id === prodAtualizado.id ? prodAtualizado : p);
+                    saveCustomProdutos(updated);
+                    _extraProdutos = updated;
+                    return updated;
+                });
+            },
+            onDelete: (prodId) => {
+                setCustomProdutos(prev => {
+                    const updated = prev.filter(p => p.id !== prodId);
+                    saveCustomProdutos(updated);
+                    _extraProdutos = updated;
+                    return updated;
+                });
+                setShowCadastro(null);
+                pushBot(createWelcomeStep(propostas.length));
+            },
         });
     }
     // ── Backup modal ─────────────────────────────────────────────────────────
@@ -2209,15 +2203,27 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     const [form, setForm] = React.useState({});
     const [erro, setErro] = React.useState("");
     const [confirmDel, setConfirmDel] = React.useState(null);
+    const buscaRef = React.useRef("");
+    const indFiltroRef = React.useRef("");
+    const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-    const todos = [...seedProdutos, ...customProdutos];
+    const handleBuscaChange = (val) => {
+        buscaRef.current = val;
+        setBusca(val);
+    };
+    const handleIndChange = (val) => {
+        indFiltroRef.current = val;
+        setIndFiltro(val);
+    };
 
-    const bl = busca.toLowerCase().trim();
+    const todos = [...seedProdutos, ...customProdutos];
+    const bl = buscaRef.current.toLowerCase().trim();
+    const ind = indFiltroRef.current;
     const filtrados = todos.filter(p => {
         if (bl && !(p.nome || "").toLowerCase().includes(bl) && !(p.codigo || "").toLowerCase().includes(bl)) return false;
-        if (indFiltro && p.industriaId !== indFiltro) return false;
+        if (ind && p.industriaId !== ind) return false;
         return true;
     });
 
@@ -2304,8 +2310,8 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
             React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, `📦 Produtos (${filtrados.length})`),
             React.createElement("span", { style: { fontSize: 11, color: "#aed6f1" } }, `${todos.length} total`)),
         React.createElement("div", { style: { padding: "12px 16px", background: "#1a5276", display: "flex", gap: 8, flexShrink: 0 } },
-            React.createElement("input", { value: busca, onChange: e => setBusca(e.target.value), placeholder: "🔍 Buscar por nome ou código…", style: { ...inputStyle, flex: 3 } }),
-            React.createElement("select", { value: indFiltro, onChange: e => setIndFiltro(e.target.value), style: { ...inputStyle, flex: 1 } },
+            React.createElement("input", { value: busca, onChange: e => handleBuscaChange(e.target.value), placeholder: "🔍 Buscar por nome ou código…", style: { ...inputStyle, flex: 3 } }),
+            React.createElement("select", { value: indFiltro, onChange: e => handleIndChange(e.target.value), style: { ...inputStyle, flex: 1 } },
                 React.createElement("option", { value: "" }, "Todas"),
                 industrias.map(i => React.createElement("option", { key: i.id, value: i.id }, i.nome)))),
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 12 } },
