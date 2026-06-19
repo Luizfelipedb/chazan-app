@@ -2200,15 +2200,18 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     const todos = [...seedProdutos, ...customProdutos];
     const [busca, setBusca] = React.useState("");
     const [indFiltro, setIndFiltro] = React.useState("");
-    const [editando, setEditando] = React.useState(null); // produto em edição
+    const [editando, setEditando] = React.useState(null);
     const [form, setForm] = React.useState({});
     const [erro, setErro] = React.useState("");
     const [confirmDel, setConfirmDel] = React.useState(null);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+    const buscaLower = busca.toLowerCase().trim();
     const filtrados = todos.filter(p => {
-        const matchBusca = !busca || p.nome.toLowerCase().includes(busca.toLowerCase()) || (p.codigo || "").toLowerCase().includes(busca.toLowerCase());
+        const matchBusca = !buscaLower ||
+            (p.nome || "").toLowerCase().includes(buscaLower) ||
+            (p.codigo || "").toLowerCase().includes(buscaLower);
         const matchInd = !indFiltro || p.industriaId === indFiltro;
         return matchBusca && matchInd;
     });
@@ -2260,11 +2263,12 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
         { key: "volume_emb", label: "Volume Embalagem (m³)", placeholder: "Ex: 0,034" },
     ];
 
+    const pgStyle = { display: "flex", flexDirection: "column", height: "100vh", background: "#f0f2f5", fontFamily: "'Inter', system-ui, sans-serif", overflow: "hidden" };
     const inputStyle = { width: "100%", padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#1e293b", fontSize: 13, outline: "none", boxSizing: "border-box" };
     const labelStyle = { display: "block", color: "#64748b", fontSize: 11, fontWeight: 600, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.04em" };
 
     // Tela de edição
-    if (editando) return React.createElement("div", { style: S.root },
+    if (editando) return React.createElement("div", { style: pgStyle },
         React.createElement("div", { style: { ...S.header, justifyContent: "space-between" } },
             React.createElement("button", { onClick: () => setEditando(null), style: S.printBack }, "← Voltar"),
             React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, isCustom(editando) ? "✏️ Editar Produto" : "👁 Produto (somente leitura)"),
@@ -2289,13 +2293,13 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
                     React.createElement("button", { onClick: () => { onDelete(confirmDel.id); setEditando(null); setConfirmDel(null); }, style: { flex: 1, padding: 10, background: "#dc2626", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 } }, "Excluir")))));
 
     // Lista
-    return React.createElement("div", { style: S.root },
+    return React.createElement("div", { style: pgStyle },
         React.createElement("div", { style: { ...S.header, justifyContent: "space-between" } },
             React.createElement("button", { onClick: onBack, style: S.printBack }, "← Voltar"),
             React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, `📦 Produtos (${filtrados.length})`),
             React.createElement("span", { style: { fontSize: 11, color: "#aed6f1" } }, `${todos.length} total`)),
         React.createElement("div", { style: { padding: "12px 16px", background: "#1a5276", display: "flex", gap: 8, flexShrink: 0 } },
-            React.createElement("input", { value: busca, onChange: e => setBusca(e.target.value), placeholder: "Buscar por nome ou código…", style: { ...inputStyle, flex: 2 } }),
+            React.createElement("input", { value: busca, onChange: e => setBusca(e.target.value), placeholder: "🔍 Buscar por nome ou código…", style: { ...inputStyle, flex: 3 } }),
             React.createElement("select", { value: indFiltro, onChange: e => setIndFiltro(e.target.value), style: { ...inputStyle, flex: 1 } },
                 React.createElement("option", { value: "" }, "Todas"),
                 industrias.map(i => React.createElement("option", { key: i.id, value: i.id }, i.nome)))),
