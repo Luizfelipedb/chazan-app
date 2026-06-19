@@ -2115,6 +2115,11 @@ function PrintView({ proposta: p, onBack, onSave, allPropostas, onBackup }) {
 function CadastroCliente({ onBack, onSave }) {
     const [form, setForm] = useState({ nome: "", cnpj: "", cidade: "", fone: "", responsavel: "", email: "" });
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    // Sincroniza lista quando produtos mudam (ex: novo produto cadastrado)
+    React.useEffect(() => {
+        aplicarFiltro();
+    }, [customProdutos.length, aplicarFiltro]);
     const [erro, setErro] = useState("");
     const handleSave = () => {
         if (!form.nome.trim()) {
@@ -2201,16 +2206,18 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     const [form, setForm] = React.useState({});
     const [erro, setErro] = React.useState("");
     const [confirmDel, setConfirmDel] = React.useState(null);
-    const [lista, setLista] = React.useState(() => [...seedProdutos, ...customProdutos]);
+    const [lista, setLista] = React.useState([...seedProdutos, ...customProdutos]);
     const inputRef = React.useRef(null);
     const indRef = React.useRef(null);
-    const todosRef = React.useRef([...seedProdutos, ...customProdutos]);
+    // Sempre atualiza todosRef quando props mudam
+    const todosRef = React.useRef([]);
+    todosRef.current = [...seedProdutos, ...customProdutos];
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
     const isCustom = (prod) => customProdutos.some(p => p.id === prod.id);
     const nomeInd = (id) => industrias.find(i => i.id === id)?.nome || id;
 
-    const aplicarFiltro = () => {
+    const aplicarFiltro = React.useCallback(() => {
         const bl = (inputRef.current ? inputRef.current.value : "").toLowerCase().trim();
         const ind = indRef.current ? indRef.current.value : "";
         const resultado = todosRef.current.filter(p => {
@@ -2219,7 +2226,7 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
             return true;
         });
         setLista(resultado);
-    };
+    }, []);
 
     const abrirEdicao = (prod) => {
         setEditando(prod);
