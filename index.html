@@ -2206,27 +2206,21 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     const [form, setForm] = React.useState({});
     const [erro, setErro] = React.useState("");
     const [confirmDel, setConfirmDel] = React.useState(null);
-    const [lista, setLista] = React.useState([...seedProdutos, ...customProdutos]);
-    const inputRef = React.useRef(null);
-    const indRef = React.useRef(null);
-    // Sempre atualiza todosRef quando props mudam
-    const todosRef = React.useRef([]);
-    todosRef.current = [...seedProdutos, ...customProdutos];
+    const [termoBusca, setTermoBusca] = React.useState("");
+    const [indFiltro, setIndFiltro] = React.useState("");
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
     const isCustom = (prod) => customProdutos.some(p => p.id === prod.id);
-    const nomeInd = (id) => industrias.find(i => i.id === id)?.nome || id;
+    const nomeInd = (id) => (industrias.find(i => i.id === id) || {}).nome || id;
 
-    const aplicarFiltro = React.useCallback(() => {
-        const bl = (inputRef.current ? inputRef.current.value : "").toLowerCase().trim();
-        const ind = indRef.current ? indRef.current.value : "";
-        const resultado = todosRef.current.filter(p => {
-            if (bl && !(p.nome || "").toLowerCase().includes(bl) && !(p.codigo || "").toLowerCase().includes(bl)) return false;
-            if (ind && p.industriaId !== ind) return false;
-            return true;
-        });
-        setLista(resultado);
-    }, []);
+    // Sempre recalcula a partir das props atuais
+    const todos = seedProdutos.concat(customProdutos);
+    const termo = termoBusca.toLowerCase().trim();
+    const filtrados = todos.filter(function(p) {
+        var matchBusca = !termo || (p.nome || "").toLowerCase().indexOf(termo) >= 0 || (p.codigo || "").toLowerCase().indexOf(termo) >= 0;
+        var matchInd = !indFiltro || p.industriaId === indFiltro;
+        return matchBusca && matchInd;
+    });
 
     const abrirEdicao = (prod) => {
         setEditando(prod);
@@ -2247,7 +2241,7 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     const handleSalvar = () => {
         if (!form.nome.trim()) { setErro("Nome obrigatório."); return; }
         if (!form.preco_revenda) { setErro("Preço Revenda obrigatório."); return; }
-        const updated = {
+        onSave({
             ...editando, ...form,
             preco: Number(String(form.preco_revenda).replace(",", ".")),
             preco_revenda: Number(String(form.preco_revenda).replace(",", ".")),
@@ -2255,19 +2249,15 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
             emb_min: Number(form.emb_min) || 1,
             peso_unit: Number(String(form.peso_unit || "0").replace(",", ".")) || 0,
             volume_emb: Number(String(form.volume_emb || "0").replace(",", ".")) || 0,
-        };
-        onSave(updated);
-        todosRef.current = todosRef.current.map(p => p.id === updated.id ? updated : p);
+        });
         setEditando(null);
-        aplicarFiltro();
     };
 
-    const pgStyle = { display: "flex", flexDirection: "column", height: "100vh", background: "#f0f2f5", fontFamily: "'Inter', system-ui, sans-serif", overflow: "hidden" };
-    const inputStyle = { width: "100%", padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#1e293b", fontSize: 13, outline: "none", boxSizing: "border-box" };
-    const labelStyle = { display: "block", color: "#64748b", fontSize: 11, fontWeight: 600, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.04em" };
-
+    const pgStyle = { display: "flex", flexDirection: "column", height: "100vh", background: "#f0f2f5", overflow: "hidden" };
+    const inp = { width: "100%", padding: "9px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#1e293b", fontSize: 13, outline: "none", boxSizing: "border-box" };
+    const lbl = { display: "block", color: "#64748b", fontSize: 11, fontWeight: 600, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.04em" };
     const campos = [
-        { key: "nome", label: "Nome do Produto *", placeholder: "Descrição" },
+        { key: "nome", label: "Nome *", placeholder: "Descrição" },
         { key: "codigo", label: "Código / SKU", placeholder: "Código" },
         { key: "unidade", label: "Unidade", placeholder: "M², CX, PÇ..." },
         { key: "preco_revenda", label: "Preço Revenda (R$) *", placeholder: "0,00" },
@@ -2280,44 +2270,57 @@ function GerenciarProdutos({ industrias, customProdutos, seedProdutos, onBack, o
     if (editando) return React.createElement("div", { style: pgStyle },
         React.createElement("div", { style: { ...S.header, justifyContent: "space-between" } },
             React.createElement("button", { onClick: () => setEditando(null), style: S.printBack }, "← Voltar"),
-            React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, isCustom(editando) ? "✏️ Editar Produto" : "👁 Visualizar Produto"),
+            React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, isCustom(editando) ? "✏️ Editar Produto" : "👁 Visualizar"),
             isCustom(editando) && React.createElement("button", { onClick: handleSalvar, style: { ...S.printBtn, background: "#16a34a" } }, "✓ Salvar")),
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 16, maxWidth: 600, width: "100%", margin: "0 auto" } },
-            !isCustom(editando) && React.createElement("div", { style: { background: "#fef3c7", color: "#92400e", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13 } },
-                "⚠️ Produto da base oficial da indústria — somente leitura."),
+            !isCustom(editando) && React.createElement("div", { style: { background: "#fef3c7", color: "#92400e", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13 } }, "⚠️ Produto da base oficial — somente leitura."),
             erro && React.createElement("div", { style: { background: "#dc2626", color: "#fff", padding: "8px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13 } }, erro),
             React.createElement("div", { style: { marginBottom: 14 } },
-                React.createElement("label", { style: labelStyle }, "Indústria"),
-                React.createElement("select", { value: form.industriaId, disabled: !isCustom(editando), onChange: e => set("industriaId", e.target.value), style: { ...inputStyle, opacity: isCustom(editando) ? 1 : 0.6 } },
+                React.createElement("label", { style: lbl }, "Indústria"),
+                React.createElement("select", { value: form.industriaId, disabled: !isCustom(editando), onChange: e => set("industriaId", e.target.value), style: { ...inp, opacity: isCustom(editando) ? 1 : 0.6 } },
                     React.createElement("option", { value: "" }, "Selecione…"),
                     industrias.map(i => React.createElement("option", { key: i.id, value: i.id }, i.nome)))),
             campos.map(c => React.createElement("div", { key: c.key, style: { marginBottom: 14 } },
-                React.createElement("label", { style: labelStyle }, c.label),
-                React.createElement("input", { value: form[c.key] ?? "", onChange: e => set(c.key, e.target.value), placeholder: c.placeholder, disabled: !isCustom(editando), style: { ...inputStyle, opacity: isCustom(editando) ? 1 : 0.6 } }))),
-            isCustom(editando) && React.createElement("button", { onClick: () => setConfirmDel(editando), style: { width: "100%", padding: "10px", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, color: "#dc2626", fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 8 } }, "🗑 Excluir este produto"),
+                React.createElement("label", { style: lbl }, c.label),
+                React.createElement("input", { value: form[c.key] != null ? form[c.key] : "", onChange: e => set(c.key, e.target.value), placeholder: c.placeholder, disabled: !isCustom(editando), style: { ...inp, opacity: isCustom(editando) ? 1 : 0.6 } }))),
+            isCustom(editando) && React.createElement("button", { onClick: () => setConfirmDel(editando), style: { width: "100%", padding: 10, background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, color: "#dc2626", fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 8 } }, "🗑 Excluir este produto"),
             confirmDel && React.createElement("div", { style: { background: "#fff", border: "2px solid #dc2626", borderRadius: 10, padding: 16, marginTop: 12 } },
-                React.createElement("p", { style: { color: "#1e293b", fontWeight: 600, marginBottom: 12 } }, `Excluir "${confirmDel.nome}"? Isso não pode ser desfeito.`),
+                React.createElement("p", { style: { color: "#1e293b", fontWeight: 600, marginBottom: 12 } }, `Excluir "${confirmDel.nome}"?`),
                 React.createElement("div", { style: { display: "flex", gap: 10 } },
                     React.createElement("button", { onClick: () => setConfirmDel(null), style: { flex: 1, padding: 10, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontWeight: 600 } }, "Cancelar"),
-                    React.createElement("button", { onClick: () => { onDelete(confirmDel.id); todosRef.current = todosRef.current.filter(p => p.id !== confirmDel.id); setEditando(null); setConfirmDel(null); aplicarFiltro(); }, style: { flex: 1, padding: 10, background: "#dc2626", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 } }, "Excluir")))));
+                    React.createElement("button", { onClick: () => { onDelete(confirmDel.id); setEditando(null); setConfirmDel(null); }, style: { flex: 1, padding: 10, background: "#dc2626", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 } }, "Excluir")))));
 
     return React.createElement("div", { style: pgStyle },
         React.createElement("div", { style: { ...S.header, justifyContent: "space-between" } },
             React.createElement("button", { onClick: onBack, style: S.printBack }, "← Voltar"),
-            React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, `📦 Produtos (${lista.length} de ${todosRef.current.length})`),
+            React.createElement("span", { style: { color: "#f1f5f9", fontWeight: 700, fontSize: 15 } }, `📦 ${filtrados.length} / ${todos.length} produtos`),
             React.createElement("span", { style: { fontSize: 11, color: "#aed6f1" } }, `${customProdutos.length} custom`)),
         React.createElement("div", { style: { padding: "12px 16px", background: "#1e3a52", display: "flex", gap: 8, flexShrink: 0 } },
-            React.createElement("input", { ref: inputRef, defaultValue: "", onInput: aplicarFiltro, placeholder: "🔍 Buscar por nome ou código…", style: { ...inputStyle, flex: 3 } }),
-            React.createElement("select", { ref: indRef, defaultValue: "", onChange: aplicarFiltro, style: { ...inputStyle, flex: 1, minWidth: 100 } },
+            React.createElement("input", {
+                type: "text",
+                value: termoBusca,
+                onChange: function(e) { setTermoBusca(e.target.value); },
+                placeholder: "🔍 Nome ou código…",
+                style: { ...inp, flex: 3 }
+            }),
+            React.createElement("select", {
+                value: indFiltro,
+                onChange: function(e) { setIndFiltro(e.target.value); },
+                style: { ...inp, flex: 1, minWidth: 90 }
+            },
                 React.createElement("option", { value: "" }, "Todas"),
                 industrias.map(i => React.createElement("option", { key: i.id, value: i.id }, i.nome)))),
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 16px" } },
-            lista.length === 0
+            filtrados.length === 0
                 ? React.createElement("div", { style: { textAlign: "center", color: "#94a3b8", marginTop: 40, fontSize: 14 } }, "Nenhum produto encontrado.")
-                : lista.map(prod => React.createElement("div", { key: prod.id, onClick: () => abrirEdicao(prod), style: { background: "#fff", borderRadius: 10, padding: "11px 14px", marginBottom: 7, border: "1px solid #e2e8f0", borderLeft: `4px solid ${isCustom(prod) ? "#2563eb" : "#cbd5e1"}`, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                : filtrados.map(prod => React.createElement("div", {
+                    key: prod.id,
+                    onClick: () => abrirEdicao(prod),
+                    style: { background: "#fff", borderRadius: 10, padding: "11px 14px", marginBottom: 7, border: "1px solid #e2e8f0", borderLeft: `4px solid ${isCustom(prod) ? "#2563eb" : "#cbd5e1"}`, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }
+                  },
                     React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                         React.createElement("div", { style: { fontWeight: 700, fontSize: 13, color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, prod.nome),
-                        React.createElement("div", { style: { fontSize: 11, color: "#64748b", marginTop: 2 } }, `${nomeInd(prod.industriaId)} · ${prod.codigo || "sem código"} · ${prod.unidade || "—"}`)),
+                        React.createElement("div", { style: { fontSize: 11, color: "#64748b", marginTop: 2 } }, `${nomeInd(prod.industriaId)} · ${prod.codigo || "—"} · ${prod.unidade || "—"}`)),
                     React.createElement("div", { style: { textAlign: "right", flexShrink: 0, marginLeft: 12 } },
                         React.createElement("div", { style: { fontWeight: 700, color: "#16a34a", fontSize: 14 } }, `R$ ${Number(prod.preco_revenda || prod.preco || 0).toFixed(2)}`),
                         isCustom(prod) && React.createElement("div", { style: { fontSize: 10, color: "#2563eb", fontWeight: 600, marginTop: 2 } }, "✏️ editável"))))));
