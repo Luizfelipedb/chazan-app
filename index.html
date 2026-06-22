@@ -679,7 +679,7 @@ Atual: ${getStatus(p).emoji} ${getStatus(p).label}`,
                 id: "edit_loaded",
                 text: `✏️ Editando *${data.numero}*
 
-👤 ${cli?.nome || "—"}
+👤 ${cli?.nome || p.clienteNome || p.cliente?.nome || "—"}
 🏭 ${ind?.nome || "—"}
 
 ${resumo}
@@ -1195,7 +1195,7 @@ Observações? (ou pule)`,
             const volLine = (vol2 > 0 && IND_COM_VOLUME.includes(final.industriaId)) ? `\n📦 Volume: ${VOL(vol2)}` : "";
             const stepObj = {
                 id: "np_done",
-                text: `💾 *${final.numero} salva!*\n\n👤 ${cli?.nome || "—"}\n🏭 ${ind?.nome || "—"} · ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}${volLine}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n📅 Válida até: ${fmtDate(final.validade)}`,
+                text: `💾 *${final.numero} salva!*\n\n👤 ${cli?.nome || p.clienteNome || p.cliente?.nome || "—"}\n🏭 ${ind?.nome || "—"} · ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}${volLine}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n📅 Válida até: ${fmtDate(final.validade)}`,
                 chips: [
                     { label: "🖨 Visualizar PDF", value: "ver_proposta", data: final },
                     { label: `${getStatus(final).emoji} Status CRM`, value: "crm_status_menu", data: final },
@@ -1221,7 +1221,7 @@ Observações? (ou pule)`,
             const ind = SEED_DATA.industrias.find(i => i.id === final.industriaId);
             pushBot({
                 id: "np_final",
-                text: `🎉 *${final.numero} criada!*\n\n👤 ${cli?.nome || "—"}\n🏭 ${ind?.nome || "—"} · Tabela ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n💳 ${final.pagamento} · ${final.frete}\n📅 Válida até: ${fmtDate(final.validade)}`,
+                text: `🎉 *${final.numero} criada!*\n\n👤 ${cli?.nome || p.clienteNome || p.cliente?.nome || "—"}\n🏭 ${ind?.nome || "—"} · Tabela ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n💳 ${final.pagamento} · ${final.frete}\n📅 Válida até: ${fmtDate(final.validade)}`,
                 chips: [
                     { label: "🖨 Visualizar PDF", value: "ver_proposta", data: final },
                     { label: `${getStatus(final).emoji} Status CRM`, value: "crm_status_menu", data: final },
@@ -1694,7 +1694,7 @@ Observações? (ou pule)`,
                     return (React.createElement("div", { key: p.id, style: { ...S.propCard, borderLeftColor: borderColor } },
                         React.createElement("div", { style: S.propCardRow },
                             React.createElement("div", null,
-                                React.createElement("div", { style: S.propCardName }, cli?.nome || "—"),
+                                React.createElement("div", { style: S.propCardName }, cli?.nome || p.clienteNome || p.cliente?.nome || "—"),
                                 React.createElement("div", { style: S.propCardNum }, p.numero),
                                 ind && React.createElement("div", { style: S.propCardInd },
                                     "\uD83C\uDFED ",
@@ -1747,7 +1747,7 @@ function MessageBubble({ msg, onAction }) {
                                 getStatus(p).emoji,
                                 " ",
                                 getStatus(p).label))),
-                    React.createElement("div", { style: S.propostaCli }, cli?.nome || "—"),
+                    React.createElement("div", { style: S.propostaCli }, cli?.nome || p.clienteNome || p.cliente?.nome || "—"),
                     ind && (React.createElement("div", { style: { fontSize: 11, color: "#64748b", marginTop: 1 } },
                         "\uD83C\uDFED ",
                         ind.nome,
@@ -1972,7 +1972,9 @@ function PrintView({ proposta: p, onBack, onSave, allPropostas, onBackup }) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${p.numero}_Chazan_Representacoes.html`;
+        const nomeCliArq = (cli.nome || p.clienteNome || "Cliente").slice(0, 30).replace(/[^a-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "_");
+        const nomeIndArq = (ind.nome || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+        a.download = `${p.numero}_${nomeCliArq}${nomeIndArq ? "_" + nomeIndArq : ""}.html`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
