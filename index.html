@@ -2115,11 +2115,6 @@ function PrintView({ proposta: p, onBack, onSave, allPropostas, onBackup }) {
 function CadastroCliente({ onBack, onSave }) {
     const [form, setForm] = useState({ nome: "", cnpj: "", cidade: "", fone: "", responsavel: "", email: "" });
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-    // Sincroniza lista quando produtos mudam (ex: novo produto cadastrado)
-    React.useEffect(() => {
-        aplicarFiltro();
-    }, [customProdutos.length, aplicarFiltro]);
     const [erro, setErro] = useState("");
     const handleSave = () => {
         if (!form.nome.trim()) {
