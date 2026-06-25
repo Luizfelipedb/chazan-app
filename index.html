@@ -691,12 +691,19 @@ O que deseja alterar?`,
                 chips: [
                     { label: "➕ Adicionar Item", value: "np_add_item" },
                     { label: "✏️ Editar Item", value: "np_choose_edit" },
+                    { label: "👤 Alterar Cliente", value: "np_alterar_cliente" },
                     { label: "💳 Pagamento e Frete", value: "np_pagamento" },
                     { label: "📅 Validade e Obs.", value: "np_edit_validade" },
                     { label: `${getStatus(data).emoji} Classificar: ${getStatus(data).label}`, value: "crm_status_menu", data },
                     { label: "💾 Salvar Proposta", value: "np_salvar_rapido" },
                     { label: "🖨 Visualizar PDF", value: "ver_proposta", data },
                 ]
+            });
+            return;
+        }
+        if (action === "np_alterar_cliente") {
+            pushBot({ id: "np_alt_cli", text: `Busque o novo cliente (nome ou CNPJ):`, inputMode: "np_cliente",
+                chips: [{ label: "❌ Cancelar", value: "np_after_item_back" }]
             });
             return;
         }
@@ -1082,7 +1089,7 @@ Observações? (ou pule)`,
                 return;
             }
             if (embMin > 1 && (qty % embMin) > 0.001) {
-                const sugerido = Math.ceil(qty / embMin) * embMin;
+                const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
                 pushBot({ ...step, text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
                     chips: [{ label: `✅ ${sugerido}`, value: "np_set_qty", data: sugerido }] });
                 return;
