@@ -854,17 +854,38 @@ Nova observação (ou pule):`,
         }
         // ── NOVA PROPOSTA ──
         if (action === "new_proposta") {
-            const maxNum = propostas.reduce((max, p) => {
-              const n = parseInt((p.numero || "P-0").replace("P-", "")) || 0;
-              return n > max ? n : max;
-            }, 0);
-            const num = "P-" + String(maxNum + 1).padStart(3, "0");
+            const calcNum = (lista) => {
+                const maxNum = lista.reduce((max, p) => {
+                    const n = parseInt((p.numero || "P-0").replace("P-", "")) || 0;
+                    return n > max ? n : max;
+                }, 0);
+                return "P-" + String(maxNum + 1).padStart(3, "0");
+            };
             const validade = addDays(7);
-            setDraft({ numero: num, clienteId: "", industriaId: "", tabela: "", itens: [], desconto: 0, pagamento: "", frete: "", valorFrete: 0, obs: "", status: "rascunho", data: new Date().toISOString().slice(0, 10), validade });
-            pushBot({ id: "np_cli", text: `Nova proposta *${num}* 🚀
+            // Busca do Supabase para garantir número correto
+            sbLoadAll().then(remote => {
+                const lista = (remote && remote.propostas && remote.propostas.length > propostas.length)
+                    ? remote.propostas : propostas;
+                // Atualiza local se Supabase tem mais
+                if (remote && remote.propostas && remote.propostas.length > propostas.length) {
+                    setPropostas(remote.propostas);
+                    savePropostas(remote.propostas);
+                }
+                const num = calcNum(lista);
+                setDraft({ numero: num, clienteId: "", industriaId: "", tabela: "", itens: [], desconto: 0, pagamento: "", frete: "", valorFrete: 0, obs: "", status: "rascunho", data: new Date().toISOString().slice(0, 10), validade });
+                pushBot({ id: "np_cli", text: `Nova proposta *${num}* 🚀
 
 Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
-                chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                    chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                });
+            }).catch(() => {
+                const num = calcNum(propostas);
+                setDraft({ numero: num, clienteId: "", industriaId: "", tabela: "", itens: [], desconto: 0, pagamento: "", frete: "", valorFrete: 0, obs: "", status: "rascunho", data: new Date().toISOString().slice(0, 10), validade });
+                pushBot({ id: "np_cli", text: `Nova proposta *${num}* 🚀
+
+Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
+                    chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                });
             });
             return;
         }
