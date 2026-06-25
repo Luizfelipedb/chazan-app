@@ -375,12 +375,23 @@ function App() {
     const inputRef = useRef(null);
     useEffect(() => {
         Promise.all([loadPropostas(), loadCustomClientes(), loadCustomProdutos()]).then(([p, cc, cp]) => {
-            setPropostas(p);
-            setCustomClientes(cc);
-            setCustomProdutos(cp);
-            _extraClientes = cc;
-            _extraProdutos = cp;
-            pushBot(createWelcomeStep(p.length));
+            // Auto-sync: try to load from Supabase on startup
+            sbLoadAll().then(remote => {
+                if (remote && remote.propostas && remote.propostas.length >= p.length) {
+                    p = remote.propostas;
+                    if (remote.clientes && remote.clientes.length > 0) { cc = remote.clientes; }
+                    if (remote.produtos && remote.produtos.length > 0) { cp = remote.produtos; }
+                    savePropostas(p);
+                    if (cc.length) saveCustomClientes(cc);
+                    if (cp.length) saveCustomProdutos(cp);
+                }
+            }).catch(() => {}).finally(() => {
+                setPropostas(p);
+                setCustomClientes(cc);
+                setCustomProdutos(cp);
+                _extraClientes = cc;
+                _extraProdutos = cp;
+                pushBot(createWelcomeStep(p.length));
             // Show follow-up alerts on load
             const alerts = getAlerts(p);
             if (alerts.length > 0) {
@@ -412,6 +423,7 @@ function App() {
                     ]
                 }), 800);
             }
+            });
         });
     }, []);
     useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
@@ -695,8 +707,60 @@ O que deseja alterar?`,
                     { label: "💳 Pagamento e Frete", value: "np_pagamento" },
                     { label: "📅 Validade e Obs.", value: "np_edit_validade" },
                     { label: `${getStatus(data).emoji} Classificar: ${getStatus(data).label}`, value: "crm_status_menu", data },
+                    { label: "📋 Duplicar Proposta", value: "np_duplicar_proposta", data },
                     { label: "💾 Salvar Proposta", value: "np_salvar_rapido" },
                     { label: "🖨 Visualizar PDF", value: "ver_proposta", data },
+                    { label: "🗑 Excluir Proposta", value: "np_excluir_proposta", data },
+                ]
+            });
+            return;
+        }
+        if (action === "np_excluir_proposta") {
+            pushBot({
+                id: "np_excluir_confirm",
+                text: `🗑 Excluir *${data.numero}*? Esta ação não pode ser desfeita.`,
+                chips: [
+                    { label: "✅ Sim, excluir", value: "np_excluir_confirm", data },
+                    { label: "← Cancelar", value: "editar_proposta", data },
+                ]
+            });
+            return;
+        }
+        if (action === "np_excluir_confirm") {
+            setPropostas(prev => {
+                const updated = prev.filter(p => p.id !== data.id);
+                savePropostas(updated);
+                return updated;
+            });
+            setDraft(null);
+            pushBot({ id: "excluido", text: `✅ Proposta *${data.numero}* excluída.`, chips: [{ label: "📋 Nova Proposta", value: "new_proposta" }, { label: "🏠 Menu", value: "menu" }] });
+            return;
+        }
+        if (action === "np_duplicar_proposta") {
+            const maxNum = propostas.reduce((max, p) => {
+                const n = parseInt((p.numero || "P-0").replace("P-","")) || 0;
+                return n > max ? n : max;
+            }, 0);
+            const novoNum = "P-" + String(maxNum + 1).padStart(3, "0");
+            const copia = {
+                ...data,
+                id: "prop_" + Date.now(),
+                numero: novoNum,
+                status: "rascunho",
+                data: new Date().toISOString().slice(0, 10),
+                validade: (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })(),
+            };
+            setPropostas(prev => {
+                const updated = [...prev, copia];
+                savePropostas(updated);
+                return updated;
+            });
+            pushBot({
+                id: "duplicado",
+                text: `📋 Proposta duplicada como *${novoNum}*! Deseja editar agora?`,
+                chips: [
+                    { label: "✏️ Editar agora", value: "editar_proposta", data: copia },
+                    { label: "🏠 Menu", value: "menu" },
                 ]
             });
             return;
