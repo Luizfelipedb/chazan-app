@@ -426,6 +426,35 @@ function App() {
             });
         });
     }, []);
+    // ── Sync periódico a cada 3 minutos ──────────────────────────────────────
+    useEffect(() => {
+        const interval = setInterval(() => {
+            sbLoadAll().then(remote => {
+                if (!remote || !remote.propostas) return;
+                setPropostas(prev => {
+                    if (remote.propostas.length > prev.length) {
+                        savePropostas(remote.propostas);
+                        return remote.propostas;
+                    }
+                    const localIds = new Set(prev.map(p => p.id));
+                    const novas = remote.propostas.filter(p => !localIds.has(p.id));
+                    if (novas.length === 0) return prev;
+                    const merged = [...prev, ...novas];
+                    savePropostas(merged);
+                    return merged;
+                });
+                if (remote.clientes && remote.clientes.length > 0) {
+                    setCustomClientes(prev => {
+                        if (remote.clientes.length <= prev.length) return prev;
+                        saveCustomClientes(remote.clientes);
+                        _extraClientes = remote.clientes;
+                        return remote.clientes;
+                    });
+                }
+            }).catch(() => {});
+        }, 3 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, []);
     useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
     useEffect(() => { _extraClientes = customClientes; }, [customClientes]);
     useEffect(() => { _extraProdutos = customProdutos; }, [customProdutos]);
