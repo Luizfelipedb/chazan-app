@@ -817,7 +817,20 @@ Busque o produto (nome ou código):`, inputMode: "np_prod_search", _indId: resol
             return;
         }
         if (action === "np_set_qty") {
-            confirmItem(data);
+            const qty = Number(data);
+            const embMin = draft?._embMin || 1;
+            if (embMin > 1 && qty < embMin) {
+                pushBot({ id: "qty_min", text: `⚠️ Quantidade mínima é *${embMin}*. Digite novamente:`, inputMode: "np_qty" });
+                return;
+            }
+            if (embMin > 1 && (Math.round(qty * 1000) % Math.round(embMin * 1000)) > 1) {
+                const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
+                pushBot({ id: "qty_mult", text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
+                    inputMode: "np_qty",
+                    chips: [{ label: `✅ ${sugerido}`, value: "np_set_qty", data: sugerido }] });
+                return;
+            }
+            confirmItem(qty);
             return;
         }
         if (action === "np_add_item") {
@@ -1088,7 +1101,7 @@ Observações? (ou pule)`,
                 pushBot({ ...step, text: `⚠️ Quantidade mínima é *${embMin}*. Digite novamente:` });
                 return;
             }
-            if (embMin > 1 && (qty % embMin) > 0.001) {
+            if (embMin > 1 && (Math.round(qty * 1000) % Math.round(embMin * 1000)) > 1) {
                 const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
                 pushBot({ ...step, text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
                     chips: [{ label: `✅ ${sugerido}`, value: "np_set_qty", data: sugerido }] });
