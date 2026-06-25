@@ -368,6 +368,7 @@ function App() {
     const [customProdutos, setCustomProdutos] = useState([]);
     const [editingItem, setEditingItem] = useState(null); // {idx, item}
     const [dashTab, setDashTab] = useState("followup");
+    const [dashSearch, setDashSearch] = useState("");
     const [driveStatus, setDriveStatus] = useState("");
     const [driveFiles, setDriveFiles] = useState([]);
     const [showDriveList, setShowDriveList] = useState(false);
@@ -659,6 +660,27 @@ Atual: ${getStatus(p).emoji} ${getStatus(p).label}`,
             return;
         }
         // ── CONSULTAS ──
+        if (action === "historico_cliente") {
+            const todosCli = [...SEED_DATA.clientes, ...customClientes];
+            const hist = propostas
+                .filter(p => p.clienteId === data.id)
+                .sort((a, b) => (b.numero || "").localeCompare(a.numero || ""));
+            if (!hist.length) {
+                pushBot({ id: "hc_empty", text: `📋 *${data.nome}*\n\nNenhuma proposta encontrada para este cliente.`,
+                    chips: [{ label: "📋 Nova Proposta", value: "new_proposta" }, { label: "🔍 Buscar Cliente", value: "search_cliente" }] });
+                return;
+            }
+            const total = hist.reduce((s, p) => s + calcTotal(p), 0);
+            const aprovadas = hist.filter(p => p.status === "aprovada" || p.crm_status === "ganha").length;
+            pushBot({
+                id: "hc_result",
+                text: `📋 *${data.nome}*\n\n${hist.length} proposta(s) · ${aprovadas} aprovada(s)\nVolume total: *${BRL(total)}*`,
+                type: "proposta_list",
+                propostas: hist,
+            });
+            pushBot({ id: "hc_nav", text: "", chips: [{ label: "🔍 Buscar Cliente", value: "search_cliente" }, { label: "🏠 Menu", value: "menu" }] });
+            return;
+        }
         if (action === "search_cliente") {
             pushBot({ id: "sc", text: "Digite o nome ou CNPJ do cliente:", inputMode: "search_cliente" });
             return;
@@ -1541,6 +1563,11 @@ Observações? (ou pule)`,
     // ── KPI computations ────────────────────────────────────────────────────────
     const hoje = new Date();
     const msDay = 86400000;
+    const isVencida = (p) => {
+        if (!p.validade) return false;
+        if (["aprovada","recusada","ganha","perdida"].includes(p.status) || ["ganha","perdida"].includes(p.crm_status)) return false;
+        return new Date(p.validade) < hoje;
+    };
     const propAberto = propostas.filter(p => !["aprovada", "recusada"].includes(p.status) && !["ganha", "perdida"].includes(p.crm_status));
     const propQuente = propostas.filter(p => p.crm_status === "quente");
     const propMorna = propostas.filter(p => p.crm_status === "morna");
@@ -1559,6 +1586,7 @@ Observações? (ou pule)`,
         mes.setDate(1);
         return new Date(p.data) >= mes;
     });
+    const propVencidas = propostas.filter(p => isVencida(p));
     const totalAberto = propAberto.reduce((s, p) => s + calcTotal(p), 0);
     const getDias = (p) => {
         if (!p.data)
@@ -1588,12 +1616,21 @@ Observações? (ou pule)`,
             return sorted.filter(p => p.crm_status === "morna");
         if (dashTab === "fria")
             return sorted.filter(p => p.crm_status === "fria");
+        if (dashTab === "vencidas")
+            return sorted.filter(p => isVencida(p));
         if (dashTab === "aprovadas")
             return sorted.filter(p => p.status === "aprovada" || p.crm_status === "ganha");
         if (dashTab === "perdidas")
             return sorted.filter(p => p.status === "recusada" || p.crm_status === "perdida");
         return sorted;
-    })();
+    })().filter(p => {
+        if (!dashSearch.trim()) return true;
+        const termo = dashSearch.trim().toLowerCase();
+        const todosCli = [...SEED_DATA.clientes, ...customClientes];
+        const cli = todosCli.find(c => c.id === p.clienteId);
+        const nome = (cli?.nome || p.clienteNome || "").toLowerCase();
+        return nome.includes(termo) || (p.numero || "").toLowerCase().includes(termo);
+    });
     // ── Drive handlers ───────────────────────────────────────────────────────────
     const handleDriveSave = async () => {
         setDriveStatus("saving");
@@ -1775,11 +1812,19 @@ Observações? (ou pule)`,
                     React.createElement("div", { style: { ...S.kpiNum, color: "#3b82f6" } }, propostas.length),
                     React.createElement("div", { style: S.kpiLabel }, "Total"),
                     React.createElement("div", { style: S.kpiSub }, "todas as propostas"))),
+            React.createElement("div", { style: { padding: "8px 24px 0", background: "#f0f2f5", flexShrink: 0 } },
+                React.createElement("input", {
+                    value: dashSearch,
+                    onChange: e => setDashSearch(e.target.value),
+                    placeholder: "🔍 Buscar por cliente ou número…",
+                    style: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box", color: "#1e293b" }
+                })),
             React.createElement("div", { style: S.tabsRow }, [
                 { key: "followup", label: "🔔 Follow-up", count: propAberto.length },
                 { key: "quente", label: "🔥 Quentes", count: propQuente.length },
                 { key: "morna", label: "🌡️ Mornas", count: propMorna.length },
                 { key: "fria", label: "🧊 Frias", count: propFria.length },
+                { key: "vencidas", label: "⏰ Vencidas", count: propVencidas.length },
                 { key: "aprovadas", label: "✅ Aprovadas", count: propAprovadas.length },
                 { key: "perdidas", label: "❌ Perdidas", count: propPerdidas.length },
                 { key: "todas", label: "📋 Todas", count: propostas.length },
@@ -1903,7 +1948,11 @@ function MessageBubble({ msg, onAction }) {
                     c.fone),
                 c.email && React.createElement("div", { style: { fontSize: 11, color: "#64748b" } },
                     "\u2709 ",
-                    c.email))))));
+                    c.email),
+                React.createElement("button", {
+                    onClick: () => onAction({ value: "historico_cliente", data: c }),
+                    style: { marginTop: 8, padding: "5px 12px", background: "#1a5276", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }
+                }, "📋 Ver Histórico"))))));
     }
     if (msg.type === "produto_cards") {
         return (React.createElement("div", { style: { ...S.bubble, ...S.botBubble, maxWidth: "95%" } },
