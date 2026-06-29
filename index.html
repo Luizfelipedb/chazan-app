@@ -2096,11 +2096,20 @@ function PrintView({ proposta: p, onBack, onSave, allPropostas, onBackup }) {
       <tbody>${rows}</tbody>
       <tfoot>
         ${descontoRow}
-        ${freteRow}
-        <tr class="total-row">
-          <td colspan="6" class="text-right" style="font-size:12px">TOTAL FINAL</td>
-          <td class="text-right" style="font-size:14px">${BRL(total)}</td>
-          <td class="text-right" style="font-size:11px">${peso > 0 ? KG(peso) : "—"}</td>
+        <tr>
+          <td colspan="6" class="text-right" style="padding:6px 8px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0">Subtotal Materiais</td>
+          <td class="text-right" style="padding:6px 8px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0">${BRL(calcTotal({...p, valorFrete:0}))}</td>
+          <td class="text-right" style="padding:6px 8px;color:#64748b;border-top:1px solid #e2e8f0">${peso > 0 ? KG(peso) : "—"}</td>
+        </tr>
+        ${p.valorFrete > 0 ? `<tr>
+          <td colspan="6" style="padding:6px 8px;text-align:right;color:#64748b">🚚 Custo do Frete (${p.frete})</td>
+          <td style="padding:6px 8px;text-align:right;color:#64748b;font-weight:600">${BRL(p.valorFrete)}</td>
+          <td></td>
+        </tr>` : ""}
+        <tr>
+          <td colspan="6" class="text-right" style="font-size:12px;font-weight:800;color:#1e293b;background:#ffffff;border-top:2.5px solid #1e293b;padding:8px;letter-spacing:0.05em">TOTAL FINAL</td>
+          <td class="text-right" style="font-size:15px;font-weight:800;color:#1e293b;background:#ffffff;border-top:2.5px solid #1e293b;padding:8px">${BRL(total)}</td>
+          <td class="text-right" style="font-size:11px;font-weight:700;color:#475569;background:#ffffff;border-top:2.5px solid #1e293b;padding:8px">${peso > 0 ? KG(peso) : "—"}</td>
         </tr>
         ${IND_COM_VOLUME.includes(p.industriaId) && calcVolumeTotal(p.itens) > 0 ? `<tr><td colspan="7" style="padding:6px 8px;text-align:right;color:#2563eb;font-weight:600">Volume Total: ${VOL(calcVolumeTotal(p.itens))}</td><td></td></tr>` : ""}
       </tfoot>
