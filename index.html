@@ -1725,18 +1725,6 @@ Observações? (ou pule)`,
                         propostas.length,
                         " proposta(s)")),
                 React.createElement("div", { style: { display: "flex", gap: 5 } },
-                    React.createElement("button", { 
-                    title: "Enviar para nuvem", 
-                    style: Object.assign({}, S.headerBtn, {background: syncStatus==="saving" ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)"}),
-                    disabled: syncStatus==="saving"||syncStatus==="loading",
-                    onClick: handleSyncSave
-                  }, "☁️⬆️"),
-                  React.createElement("button", { 
-                    title: "Receber da nuvem",
-                    style: Object.assign({}, S.headerBtn, {background: syncStatus==="loading" ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)"}),
-                    disabled: syncStatus==="saving"||syncStatus==="loading",
-                    onClick: handleSyncLoad
-                  }, "☁️⬇️"),
                   React.createElement("button", { title: "Exportar", style: S.headerBtn, onClick: () => {
                             const data = JSON.stringify({ propostas, clientes: customClientes, produtos: customProdutos }, null, 2);
                             const blob = new Blob([data], { type: "application/json" });
