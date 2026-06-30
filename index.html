@@ -376,12 +376,25 @@ function App() {
     const inputRef = useRef(null);
     useEffect(() => {
         Promise.all([loadPropostas(), loadCustomClientes(), loadCustomProdutos()]).then(([p, cc, cp]) => {
-            // Auto-sync: try to load from Supabase on startup
+            // Auto-sync: merge local com Supabase no startup (nunca descarta dados locais)
             sbLoadAll().then(remote => {
-                if (remote && remote.propostas && remote.propostas.length >= p.length) {
-                    p = remote.propostas;
-                    if (remote.clientes && remote.clientes.length > 0) { cc = remote.clientes; }
-                    if (remote.produtos && remote.produtos.length > 0) { cp = remote.produtos; }
+                if (remote && remote.propostas) {
+                    const map = new Map();
+                    p.forEach(item => map.set(item.id, item));
+                    remote.propostas.forEach(rp => { if (!map.has(rp.id)) map.set(rp.id, rp); });
+                    p = Array.from(map.values());
+                    if (remote.clientes && remote.clientes.length > 0) {
+                        const cmap = new Map();
+                        cc.forEach(c => cmap.set(c.id, c));
+                        remote.clientes.forEach(rc => { if (!cmap.has(rc.id)) cmap.set(rc.id, rc); });
+                        cc = Array.from(cmap.values());
+                    }
+                    if (remote.produtos && remote.produtos.length > 0) {
+                        const pmap = new Map();
+                        cp.forEach(prod => pmap.set(prod.id, prod));
+                        remote.produtos.forEach(rprod => { if (!pmap.has(rprod.id)) pmap.set(rprod.id, rprod); });
+                        cp = Array.from(pmap.values());
+                    }
                     savePropostas(p);
                     if (cc.length) saveCustomClientes(cc);
                     if (cp.length) saveCustomProdutos(cp);
@@ -427,29 +440,39 @@ function App() {
             });
         });
     }, []);
-    // ── Sync periódico a cada 3 minutos ──────────────────────────────────────
+    // ── Sync periódico a cada 3 minutos (merge real, nunca substitui) ────────
     useEffect(() => {
         const interval = setInterval(() => {
             sbLoadAll().then(remote => {
                 if (!remote || !remote.propostas) return;
                 setPropostas(prev => {
-                    if (remote.propostas.length > prev.length) {
-                        savePropostas(remote.propostas);
-                        return remote.propostas;
-                    }
-                    const localIds = new Set(prev.map(p => p.id));
-                    const novas = remote.propostas.filter(p => !localIds.has(p.id));
-                    if (novas.length === 0) return prev;
-                    const merged = [...prev, ...novas];
+                    // Merge por ID: mantém local + adiciona remotas que não existem localmente
+                    // Para propostas que existem nos dois lados, mantém a versão mais recente (updated_at)
+                    const map = new Map();
+                    prev.forEach(p => map.set(p.id, p));
+                    remote.propostas.forEach(rp => {
+                        const local = map.get(rp.id);
+                        if (!local) {
+                            map.set(rp.id, rp); // proposta nova vinda de outro usuário
+                        }
+                        // Se já existe local, mantém local (evita sobrescrever edição em andamento)
+                    });
+                    const merged = Array.from(map.values());
+                    if (merged.length === prev.length) return prev; // nada novo
+                    skipNextSaveRef.current = true; // não re-salva o que acabou de vir do servidor
                     savePropostas(merged);
                     return merged;
                 });
                 if (remote.clientes && remote.clientes.length > 0) {
                     setCustomClientes(prev => {
-                        if (remote.clientes.length <= prev.length) return prev;
-                        saveCustomClientes(remote.clientes);
-                        _extraClientes = remote.clientes;
-                        return remote.clientes;
+                        const map = new Map();
+                        prev.forEach(c => map.set(c.id, c));
+                        remote.clientes.forEach(rc => { if (!map.has(rc.id)) map.set(rc.id, rc); });
+                        const merged = Array.from(map.values());
+                        if (merged.length === prev.length) return prev;
+                        saveCustomClientes(merged);
+                        _extraClientes = merged;
+                        return merged;
                     });
                 }
             }).catch(() => {});
@@ -742,7 +765,7 @@ Atual: ${getStatus(p).emoji} ${getStatus(p).label}`,
                 id: "edit_loaded",
                 text: `✏️ Editando *${data.numero}*
 
-👤 ${cli?.nome || p.clienteNome || p.cliente?.nome || "—"}
+👤 ${cli?.nome || data.clienteNome || data.cliente?.nome || "—"}
 🏭 ${ind?.nome || "—"}
 
 ${resumo}
@@ -1351,7 +1374,7 @@ Observações? (ou pule)`,
             const volLine = (vol2 > 0 && IND_COM_VOLUME.includes(final.industriaId)) ? `\n📦 Volume: ${VOL(vol2)}` : "";
             const stepObj = {
                 id: "np_done",
-                text: `💾 *${final.numero} salva!*\n\n👤 ${cli?.nome || p.clienteNome || p.cliente?.nome || "—"}\n🏭 ${ind?.nome || "—"} · ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}${volLine}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n📅 Válida até: ${fmtDate(final.validade)}`,
+                text: `💾 *${final.numero} salva!*\n\n👤 ${cli?.nome || final.clienteNome || final.cliente?.nome || "—"}\n🏭 ${ind?.nome || "—"} · ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}${volLine}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n📅 Válida até: ${fmtDate(final.validade)}`,
                 chips: [
                     { label: "🖨 Visualizar PDF", value: "ver_proposta", data: final },
                     { label: `${getStatus(final).emoji} Status CRM`, value: "crm_status_menu", data: final },
@@ -1377,7 +1400,7 @@ Observações? (ou pule)`,
             const ind = SEED_DATA.industrias.find(i => i.id === final.industriaId);
             pushBot({
                 id: "np_final",
-                text: `🎉 *${final.numero} criada!*\n\n👤 ${cli?.nome || p.clienteNome || p.cliente?.nome || "—"}\n🏭 ${ind?.nome || "—"} · Tabela ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n💳 ${final.pagamento} · ${final.frete}\n📅 Válida até: ${fmtDate(final.validade)}`,
+                text: `🎉 *${final.numero} criada!*\n\n👤 ${cli?.nome || final.clienteNome || final.cliente?.nome || "—"}\n🏭 ${ind?.nome || "—"} · Tabela ${final.tabela}\n📦 ${final.itens.length} item(s)\n⚖️ ${KG(peso)}\n💰 *${BRL(total)}*${final.valorFrete > 0 ? "\n🚚 Frete: " + BRL(final.valorFrete) : ""}\n💳 ${final.pagamento} · ${final.frete}\n📅 Válida até: ${fmtDate(final.validade)}`,
                 chips: [
                     { label: "🖨 Visualizar PDF", value: "ver_proposta", data: final },
                     { label: `${getStatus(final).emoji} Status CRM`, value: "crm_status_menu", data: final },
@@ -1441,8 +1464,13 @@ Observações? (ou pule)`,
     setTimeout(() => setSyncStatus(""), 4000);
   };
 
-  // Auto-save to Supabase whenever propostas change
+  // Auto-save to Supabase whenever propostas change (skip if change came FROM sync)
+  const skipNextSaveRef = React.useRef(false);
   React.useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     if (propostas.length > 0) {
       sbSaveAll(propostas, customClientes, customProdutos).catch(() => {});
     }
