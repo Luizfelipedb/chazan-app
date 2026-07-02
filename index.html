@@ -361,6 +361,9 @@ function App() {
     const [step, setStep] = useState(null);
     const stepRef = useRef(null);
     const [draft, setDraft] = useState(null);
+    // Ref para o draft — usado pelo sync periódico para não interferir durante edição
+    const _draftSyncRef = React.useRef(null);
+    useEffect(() => { _draftSyncRef.current = draft; }, [draft]);
     const [showPrint, setShowPrint] = useState(null);
     const [showBackup, setShowBackup] = useState(false);
     const [showCadastro, setShowCadastro] = useState(null); // 'cliente' | 'produto'
@@ -441,8 +444,10 @@ function App() {
         });
     }, []);
     // ── Sync periódico a cada 3 minutos (merge real, nunca substitui) ────────
+    const draftRef = React.useRef(null);
     useEffect(() => {
         const interval = setInterval(() => {
+            if (_draftSyncRef.current) return; // Não sincroniza enquanto há proposta em edição
             sbLoadAll().then(remote => {
                 if (!remote || !remote.propostas) return;
                 setPropostas(prev => {
@@ -802,7 +807,8 @@ O que deseja alterar?`,
         }
         if (action === "np_excluir_confirm") {
             setPropostas(prev => {
-                const updated = prev.filter(p => p.id !== data.id);
+                // Match by id OR by numero as fallback
+                const updated = prev.filter(p => p.id !== data.id && p.numero !== data.numero);
                 savePropostas(updated);
                 return updated;
             });
