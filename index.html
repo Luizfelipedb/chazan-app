@@ -971,6 +971,10 @@ Busque o produto (nome ou código):`, inputMode: "np_prod_search", _indId: resol
             });
             return;
         }
+        if (action === "np_prod_ja_adicionado") {
+            pushBot({ id: "ja_add", text: `⚠️ *${data.nome}* já foi adicionado a esta proposta. Busque outro produto ou finalize:`, inputMode: "np_prod_search", _indId: draft?.industriaId });
+            return;
+        }
         if (action === "np_select_produto") {
             const tabela = draft?.tabela || "revenda";
             const preco = tabela === "construtora" && data.preco_construtora
@@ -1262,7 +1266,11 @@ Observações? (ou pule)`,
                     const tabela = draft?.tabela || "revenda";
                     const preco = tabela === "construtora" && p.preco_construtora ? p.preco_construtora : p.preco_revenda || p.preco;
                     const embInfo = p.emb_min && p.emb_min > 1 ? ` | mín: ${p.emb_min}` : "";
-                    return { label: `${p.codigo ? "[" + p.codigo + "] " : ""}${p.nome.length > 28 ? p.nome.slice(0, 26) + "…" : p.nome} — ${BRL(preco)}${embInfo}`, value: "np_select_produto", data: p };
+                    const jaAdicionado = draft?.itens?.some(it => it.produtoId === p.id);
+                    const nomeProd = p.nome.length > 28 ? p.nome.slice(0, 26) + "…" : p.nome;
+                    return jaAdicionado
+                        ? { label: `🔴 ${p.codigo ? "[" + p.codigo + "] " : ""}${nomeProd} — JÁ ADICIONADO`, value: "np_prod_ja_adicionado", data: p, style: "danger" }
+                        : { label: `${p.codigo ? "[" + p.codigo + "] " : ""}${nomeProd} — ${BRL(preco)}${embInfo}`, value: "np_select_produto", data: p };
                 }) });
             return;
         }
@@ -1839,7 +1847,7 @@ Observações? (ou pule)`,
             React.createElement("div", { style: S.messages },
                 msgs.map(msg => React.createElement(MessageBubble, { key: msg.id, msg: msg, onAction: (c) => processActionWrapped(c.value, c.label, c.data) })),
                 React.createElement("div", { ref: bottomRef })),
-            activeChips.length > 0 && (React.createElement("div", { style: S.chipsBar }, activeChips.map((chip, i) => (React.createElement("button", { key: i, onClick: () => { pushUser(chip.label); processActionWrapped(chip.value, chip.label, chip.data); }, style: S.chip }, chip.label))))),
+            activeChips.length > 0 && (React.createElement("div", { style: S.chipsBar }, activeChips.map((chip, i) => (React.createElement("button", { key: i, onClick: () => { pushUser(chip.label); processActionWrapped(chip.value, chip.label, chip.data); }, style: chip.style === "danger" ? { ...S.chip, background: "#fee2e2", border: "1px solid #fca5a5", color: "#dc2626", fontWeight: 700 } : S.chip }, chip.label))))),
             (activeInputMode || !activeChips.length) && (React.createElement("div", { style: S.inputBar },
                 React.createElement("input", { ref: inputRef, value: input, onChange: e => setInput(e.target.value), onKeyDown: e => e.key === "Enter" && handleSend(), placeholder: activeInputMode === "date" ? "DD/MM/AAAA…" : "Digite…", style: S.input, autoFocus: true }),
                 React.createElement("button", { onClick: handleSend, style: S.sendBtn }, "\u27A4")))),
