@@ -793,7 +793,8 @@ O que deseja alterar?`,
                     { label: "➕ Adicionar Item", value: "np_add_item" },
                     { label: "✏️ Editar Item", value: "np_choose_edit" },
                     { label: "👤 Alterar Cliente", value: "np_alterar_cliente" },
-                    { label: "💳 Pagamento e Frete", value: "np_pagamento" },
+                    { label: "💳 Pagamento", value: "np_pagamento" },
+                    { label: "🚚 Frete", value: "np_frete_direto" },
                     { label: "📅 Validade e Obs.", value: "np_edit_validade" },
                     { label: `${getStatus(data).emoji} Classificar: ${getStatus(data).label}`, value: "crm_status_menu", data },
                     { label: "📋 Duplicar Proposta", value: "np_duplicar_proposta", data },
@@ -1077,6 +1078,14 @@ Digite a nova quantidade:`, inputMode: "np_edit_qty_input",
             saveAndDone();
             return;
         }
+        if (action === "np_frete_direto") {
+            pushBot({ id: "np_fr2", text: "🚚 Frete:",
+                chips: [
+                    ...["FOB", "CIF", "A definir"].map(f => ({ label: f, value: "np_set_frete", data: f })),
+                    { label: "❌ Cancelar", value: "np_after_item_back" },
+                ] });
+            return;
+        }
         if (action === "np_pagamento") {
             pushBot({
                 id: "np_pag", text: "💳 Condição de pagamento:",
@@ -1102,12 +1111,10 @@ Digite a nova quantidade:`, inputMode: "np_edit_qty_input",
                 });
                 return { ...d, pagamento: data, itens };
             });
-            pushBot({ id: "np_fr", text: `✅ Pagamento: *${data}*${encargoInfo}
-
-Frete:`,
+            pushBot({ id: "np_pag_ok", text: `✅ Pagamento: *${data}*${encargoInfo}`,
                 chips: [
-                    ...["FOB", "CIF", "A definir"].map(f => ({ label: f, value: "np_set_frete", data: f })),
-                    { label: "❌ Cancelar", value: "cancelar_proposta" },
+                    { label: "🚚 Definir Frete", value: "np_frete_direto" },
+                    { label: "← Voltar ao menu", value: "np_after_item_back" },
                 ] });
             return;
         }
@@ -1376,7 +1383,8 @@ Observações? (ou pule)`,
                     { label: "➕ Adicionar Produto", value: "np_add_item" },
                     { label: "✏️ Editar Item", value: "np_choose_edit" },
                     { label: "💾 Salvar Agora", value: "np_salvar_rapido" },
-                    { label: "💳 Pagamento e Frete", value: "np_pagamento" },
+                    { label: "💳 Pagamento", value: "np_pagamento" },
+                    { label: "🚚 Frete", value: "np_frete_direto" },
                     { label: "❌ Cancelar", value: "cancelar_proposta" },
                 ]
             });
