@@ -386,23 +386,26 @@ function App() {
     const inputRef = useRef(null);
     useEffect(() => {
         Promise.all([loadPropostas(), loadCustomClientes(), loadCustomProdutos()]).then(([p, cc, cp]) => {
-            // Auto-sync: merge local com Supabase no startup (nunca descarta dados locais)
+            // Auto-sync: Supabase é a fonte da verdade no startup
+            // Local só adiciona propostas criadas offline que ainda não chegaram ao servidor
             sbLoadAll().then(remote => {
                 if (remote && remote.propostas) {
+                    // Começa com o que está no Supabase (já excluídos não voltam)
                     const map = new Map();
-                    p.forEach(item => map.set(item.id, item));
-                    remote.propostas.forEach(rp => { if (!map.has(rp.id)) map.set(rp.id, rp); });
+                    remote.propostas.forEach(rp => map.set(rp.id, rp));
+                    // Adiciona do local apenas o que não está no remoto (criado offline)
+                    p.forEach(lp => { if (!map.has(lp.id)) map.set(lp.id, lp); });
                     p = Array.from(map.values());
                     if (remote.clientes && remote.clientes.length > 0) {
                         const cmap = new Map();
-                        cc.forEach(c => cmap.set(c.id, c));
-                        remote.clientes.forEach(rc => { if (!cmap.has(rc.id)) cmap.set(rc.id, rc); });
+                        remote.clientes.forEach(rc => cmap.set(rc.id, rc));
+                        cc.forEach(lc => { if (!cmap.has(lc.id)) cmap.set(lc.id, lc); });
                         cc = Array.from(cmap.values());
                     }
                     if (remote.produtos && remote.produtos.length > 0) {
                         const pmap = new Map();
-                        cp.forEach(prod => pmap.set(prod.id, prod));
-                        remote.produtos.forEach(rprod => { if (!pmap.has(rprod.id)) pmap.set(rprod.id, rprod); });
+                        remote.produtos.forEach(rp => pmap.set(rp.id, rp));
+                        cp.forEach(lp => { if (!pmap.has(lp.id)) pmap.set(lp.id, lp); });
                         cp = Array.from(pmap.values());
                     }
                     savePropostas(p);
