@@ -876,7 +876,7 @@ Nova validade:`,
                     { label: "30 dias", value: "np_set_validade", data: addDays(30) },
                     { label: "Manter atual", value: "np_set_obs_direct" },
                     ,
-                    { label: "❌ Cancelar", value: "cancelar_proposta" }
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }
                 ]
             });
             return;
@@ -889,7 +889,7 @@ Nova validade:`,
 Nova observação (ou pule):`,
                 inputMode: "np_obs",
                 chips: [{ label: "⏭ Manter atual", value: "np_set_obs", data: draft?.obs || "" },
-                    { label: "❌ Cancelar", value: "cancelar_proposta" }]
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
             });
             return;
         }
@@ -917,7 +917,7 @@ Nova observação (ou pule):`,
                 pushBot({ id: "np_cli", text: `Nova proposta *${num}* 🚀
 
 Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
-                    chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                    chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
                 });
             }).catch(() => {
                 const num = calcNum(propostas);
@@ -925,14 +925,14 @@ Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
                 pushBot({ id: "np_cli", text: `Nova proposta *${num}* 🚀
 
 Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
-                    chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                    chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
                 });
             });
             return;
         }
         if (action === "np_buscar_cliente_novo") {
             pushBot({ id: "np_cli_back", text: `Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
-                chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
             });
             return;
         }
@@ -940,7 +940,7 @@ Busque o cliente (nome ou CNPJ):`, inputMode: "np_cliente",
             setDraft(d => ({ ...d, clienteId: data.id }));
             const indChips = [
                 ...SEED_DATA.industrias.map(i => ({ label: i.nome, value: "np_select_industria", data: i })),
-                { label: "❌ Cancelar", value: "cancelar_proposta" },
+                { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" },
             ];
             pushBot({ id: "np_ind", text: `✅ *${data.nome}*\n\nQual indústria?`, chips: indChips });
             return;
@@ -956,7 +956,7 @@ Qual tabela usar?`,
                 chips: [
                     { label: "🏪 Revenda", value: "np_select_tabela", data: { ind: data, tipo: "revenda" } },
                     { label: "🏗 Construtora", value: "np_select_tabela", data: { ind: data, tipo: "construtora" } },
-                    { label: "❌ Cancelar", value: "cancelar_proposta" },
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" },
                 ]
             });
             return;
@@ -968,7 +968,7 @@ Qual tabela usar?`,
             pushBot({ id: "np_prod", text: `✅ Tabela *${tipo}* selecionada.
 
 Busque o produto (nome ou código):`, inputMode: "np_prod_search", _indId: resolvedIndId,
-                chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
             });
             return;
         }
@@ -993,7 +993,7 @@ Busque o produto (nome ou código):`, inputMode: "np_prod_search", _indId: resol
                 text: `📦 *${data.nome}*\nPreço (${tabela}): *${BRL(preco)}* / ${unidade}${data.peso_unit > 0 ? ` · ${data.peso_unit} kg/un` : ""}${embMin > 1 ? `\n⚠️ Qtd mínima: *${embMin} ${unidade}*` : ""}\n\nQuantidade:`,
                 inputMode: "np_qty",
                 chips: qtys.map(n => ({ label: `${n} ${unidade}`, value: "np_set_qty", data: n })),
-                chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
             });
             return;
         }
@@ -1019,7 +1019,7 @@ Busque o produto (nome ou código):`, inputMode: "np_prod_search", _indId: resol
             const _ind2 = SEED_DATA.industrias.find(i => i.id === _indId2);
             const _nProd2 = SEED_DATA.produtos.filter(p => p.industriaId === _indId2).length;
             pushBot({ id: "np_prod2", text: `🏭 ${_ind2?.nome || "Indústria"} · ${_nProd2} produto(s)\n\nBusque o próximo produto:`, inputMode: "np_prod_search", _indId: _indId2,
-                chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }]
+                chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }]
             });
             return;
         }
@@ -1038,7 +1038,7 @@ O que editar?`,
                     { label: "🗑 Remover Item", value: "np_remove_item", data },
                     { label: "✅ Manter atual", value: "np_after_item_back" },
                     ,
-                    { label: "❌ Cancelar", value: "cancelar_proposta" }
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }
                 ]
             });
             return;
@@ -1064,7 +1064,7 @@ Digite o novo preço:`, inputMode: "np_edit_preco_input" });
 Digite a nova quantidade:`, inputMode: "np_edit_qty_input",
                 chips: [
                     ...sugestoes.map(n => ({ label: String(n), value: "np_set_edit_qty", data: n })),
-                    { label: "❌ Cancelar", value: "cancelar_proposta" },
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" },
                 ] });
             return;
         }
@@ -1107,7 +1107,7 @@ Digite a nova quantidade:`, inputMode: "np_edit_qty_input",
                 id: "np_pag", text: "💳 Condição de pagamento:",
                 chips: [
                     ...["Antecipado", "7 Dias", "28 Dias", "28/56 Dias", "28/42/56 Dias", "28/42/56/70/84 Dias", "A definir"].map(p => ({ label: p, value: "np_set_pagamento", data: p })),
-                    { label: "❌ Cancelar", value: "cancelar_proposta" },
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" },
                 ]
             });
             return;
@@ -1141,7 +1141,7 @@ Digite a nova quantidade:`, inputMode: "np_edit_qty_input",
 Informe o valor do frete (R$) ou pule:`,
                 inputMode: "np_valor_frete",
                 chips: [{ label: "⏭ Sem Frete", value: "np_set_valor_frete", data: 0 },
-                    { label: "❌ Cancelar", value: "cancelar_proposta" }] });
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }] });
             return;
         }
         if (action === "np_set_valor_frete") {
@@ -1149,7 +1149,7 @@ Informe o valor do frete (R$) ou pule:`,
             pushBot({ id: "np_desc", text: `✅ Frete: *${data > 0 ? BRL(data) : "sem custo informado"}*\n\nDesconto geral (%)?`,
                 chips: [
                     ...["0%", "3%", "5%", "8%", "10%", "15%"].map(d => ({ label: d, value: "np_set_desconto", data: parseInt(d) })),
-                    { label: "❌ Cancelar", value: "cancelar_proposta" },
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" },
                 ] });
             return;
         }
@@ -1164,7 +1164,7 @@ Validade da proposta? (padrão: 7 dias)`,
                     { label: "15 dias", value: "np_set_validade", data: addDays(15) },
                     { label: "30 dias", value: "np_set_validade", data: addDays(30) },
                     ,
-                    { label: "❌ Cancelar", value: "cancelar_proposta" }
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }
                 ]
             });
             return;
@@ -1176,7 +1176,7 @@ Validade da proposta? (padrão: 7 dias)`,
 Observações? (ou pule)`,
                 inputMode: "np_obs",
                 chips: [{ label: "⏭ Pular", value: "np_set_obs", data: "" },
-                    { label: "❌ Cancelar", value: "cancelar_proposta" }] });
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }] });
             return;
         }
         if (action === "np_set_obs") {
@@ -1234,10 +1234,10 @@ Observações? (ou pule)`,
             const r = todosClientes.filter(c => c.nome.toLowerCase().includes(val.toLowerCase()) ||
                 (c.cnpj || "").includes(val)).slice(0, 8);
             if (!r.length) {
-                pushBot({ id: "nc2", text: "Nenhum cliente encontrado. Tente outro termo:", inputMode: "np_cliente", chips: [{ label: "❌ Cancelar", value: "cancelar_proposta" }, { label: "🏠 Menu Inicial", value: "menu" }] });
+                pushBot({ id: "nc2", text: "Nenhum cliente encontrado. Tente outro termo:", inputMode: "np_cliente", chips: [{ label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }, { label: "🏠 Menu Inicial", value: "menu" }] });
                 return;
             }
-            pushBot({ id: "ncr", text: `${r.length} resultado(s). Selecione:`, chips: [...r.map(c => ({ label: c.nome.length > 38 ? c.nome.slice(0, 36) + "…" : c.nome, value: "np_select_cliente", data: c })), { label: "← Buscar novamente", value: "np_buscar_cliente_novo" }, { label: "❌ Cancelar", value: "cancelar_proposta" }] });
+            pushBot({ id: "ncr", text: `${r.length} resultado(s). Selecione:`, chips: [...r.map(c => ({ label: c.nome.length > 38 ? c.nome.slice(0, 36) + "…" : c.nome, value: "np_select_cliente", data: c })), { label: "← Buscar novamente", value: "np_buscar_cliente_novo" }, { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" }] });
             return;
         }
         if (mode === "search_produto") {
@@ -1409,7 +1409,7 @@ Observações? (ou pule)`,
                     { label: "💾 Salvar Agora", value: "np_salvar_rapido" },
                     { label: "💳 Pagamento", value: "np_pagamento" },
                     { label: "🚚 Frete", value: "np_frete_direto" },
-                    { label: "❌ Cancelar", value: "cancelar_proposta" },
+                    { label: "💾 Salvar", value: "np_salvar_rapido" }, { label: "❌ Cancelar", value: "cancelar_proposta" },
                 ]
             });
             return d;
