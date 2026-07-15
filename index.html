@@ -1005,7 +1005,7 @@ Busque o produto (nome ou código):`, inputMode: "np_prod_search", _indId: resol
                 pushBot({ id: "qty_min", text: `⚠️ Quantidade mínima é *${embMin}*. Digite novamente:`, inputMode: "np_qty" });
                 return;
             }
-            if (embMin > 1 && (Math.round(qty * 1000) % Math.round(embMin * 1000)) > 1) {
+            if (embMin > 1 && (Math.abs(Math.round(qty / embMin) * embMin - qty) > 0.01) {
                 const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
                 pushBot({ id: "qty_mult", text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
                     inputMode: "np_qty",
@@ -1072,7 +1072,7 @@ Digite a nova quantidade:`, inputMode: "np_edit_qty_input",
         if (action === "np_set_edit_qty") {
             const embMin = draft?._embMin || 1;
             const qty = Number(data);
-            if (embMin > 1 && (Math.round(qty * 1000) % Math.round(embMin * 1000)) > 1) {
+            if (embMin > 1 && (Math.abs(Math.round(qty / embMin) * embMin - qty) > 0.01) {
                 const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
                 pushBot({ id: "qty_mult_edit", text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
                     inputMode: "np_edit_qty_input",
@@ -1309,7 +1309,7 @@ Observações? (ou pule)`,
                 pushBot({ ...step, text: `⚠️ Quantidade mínima é *${embMin}*. Digite novamente:` });
                 return;
             }
-            if (embMin > 1 && (Math.round(qty * 1000) % Math.round(embMin * 1000)) > 1) {
+            if (embMin > 1 && (Math.abs(Math.round(qty / embMin) * embMin - qty) > 0.01) {
                 const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
                 pushBot({ ...step, text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
                     chips: [{ label: `✅ ${sugerido}`, value: "np_set_qty", data: sugerido }] });
@@ -1334,7 +1334,7 @@ Observações? (ou pule)`,
                 return;
             }
             const embMin = draft?._embMin || 1;
-            if (embMin > 1 && (Math.round(qty * 1000) % Math.round(embMin * 1000)) > 1) {
+            if (embMin > 1 && (Math.abs(Math.round(qty / embMin) * embMin - qty) > 0.01) {
                 const sugerido = Math.round(Math.ceil(qty / embMin) * embMin * 100) / 100;
                 pushBot({ id: "qty_mult_edit2", text: `⚠️ Deve ser múltiplo de *${embMin}*. Mais próximo: *${sugerido}*. Confirma ou digite outro valor:`,
                     inputMode: "np_edit_qty_input",
